@@ -2,6 +2,8 @@ use clap::{Parser, Subcommand};
 use dcfr_solver::abstraction::EquityAbstraction;
 use dcfr_solver::card::{parse_cards, Hand};
 use dcfr_solver::cfr::{DcfrMode, SubgameConfig, SubgameSolver};
+use dcfr_solver::nodelock::{NodeLock, NodeLocks};
+use dcfr_solver::game::{OOP, IP};
 use dcfr_solver::export::{export_preflop_chart, SolveResult};
 use dcfr_solver::game::{BetConfig, BetSize, Street};
 use std::sync::Arc;
@@ -305,6 +307,24 @@ enum Commands {
         /// 0.0 = full reset, 0.1 = keep 10%.
         #[arg(long, default_value_t = 1.0)]
         unfreeze_decay: f32,
+
+        /// Lock a player's strategy at a specific decision node.
+        /// Can be specified multiple times to lock multiple nodes.
+        ///
+        /// Format: "[action_path:]player:freq1,freq2,..."
+        ///   action_path  — the betting history to this node, '>' separated (empty = root)
+        ///   player       — "oop" or "ip"
+        ///   freq1,...    — per-action frequencies (auto-normalized); order matches tree actions
+        ///
+        /// Examples:
+        ///   Lock OOP root to check-only:     --node-lock "oop:1,0"
+        ///   Lock IP after check to 50/50:    --node-lock "check:ip:1,1"
+        ///   Lock OOP after check,bet50% call: --node-lock "check>bet 50%:oop:0,1"
+        ///
+        /// Action names match the solver's display format:
+        ///   fold, check, call, allin, "bet N%", "bet N/D", "bet Nx"
+        #[arg(long)]
+        node_lock: Vec<String>,
     },
 
     /// Extract preflop chart from blueprint
@@ -492,7 +512,7 @@ fn main() {
         Commands::Train { iterations, abstraction, output, stack, seed } => {
             cmd_train(iterations, &abstraction, &output, stack, seed);
         }
-        Commands::Solve { board, oop_range, ip_range, pot, stack, street, iterations, bet_sizes, raise_sizes, format, output, skip_cum_strategy, no_dcfr, depth_limit, valuenet, allin_pot_ratio, allin_threshold, max_raises, no_donk, geometric, exploration_eps, smooth_threshold, entropy_bonus, entropy_anneal, entropy_root_only, opp_dilute, softmax_temp, lcfr, algorithm, purify, passive_tiebreak, flop_bet, flop_raise, turn_bet, turn_raise, river_bet, river_raise, rake, rake_cap, qre_lambda, qre_damping, qre_anneal, no_iso, rm_floor, alternating, t_weight, frozen_root, two_phase, check_bias, dcfr_gamma, dcfr_alpha, pref_delta, pref_beta, pref_beta_all, pruning, combo_bias, frozen_warmup, unfreeze_decay } => {
+        Commands::Solve { board, oop_range, ip_range, pot, stack, street, iterations, bet_sizes, raise_sizes, format, output, skip_cum_strategy, no_dcfr, depth_limit, valuenet, allin_pot_ratio, allin_threshold, max_raises, no_donk, geometric, exploration_eps, smooth_threshold, entropy_bonus, entropy_anneal, entropy_root_only, opp_dilute, softmax_temp, lcfr, algorithm, purify, passive_tiebreak, flop_bet, flop_raise, turn_bet, turn_raise, river_bet, river_raise, rake, rake_cap, qre_lambda, qre_damping, qre_anneal, no_iso, rm_floor, alternating, t_weight, frozen_root, two_phase, check_bias, dcfr_gamma, dcfr_alpha, pref_delta, pref_beta, pref_beta_all, pruning, combo_bias, frozen_warmup, unfreeze_decay, node_lock } => {
             let per_street = PerStreetSizes {
                 flop_bet: flop_bet.as_deref(),
                 flop_raise: flop_raise.as_deref(),
@@ -501,7 +521,7 @@ fn main() {
                 river_bet: river_bet.as_deref(),
                 river_raise: river_raise.as_deref(),
             };
-            cmd_solve(&board, &oop_range, &ip_range, pot, stack, &street, iterations, bet_sizes.as_deref(), raise_sizes.as_deref(), format.as_deref(), &output, skip_cum_strategy, no_dcfr, depth_limit.as_deref(), valuenet.as_deref(), allin_pot_ratio, allin_threshold, max_raises, no_donk, geometric, exploration_eps, smooth_threshold, entropy_bonus, entropy_anneal, entropy_root_only, opp_dilute, softmax_temp, lcfr, &algorithm, purify, passive_tiebreak, &per_street, rake, rake_cap, qre_lambda, qre_damping, qre_anneal, no_iso, rm_floor, alternating, t_weight, frozen_root.as_deref(), two_phase, check_bias, dcfr_gamma, dcfr_alpha, pref_delta, pref_beta, pref_beta_all, pruning, combo_bias.as_deref(), frozen_warmup, unfreeze_decay);
+            cmd_solve(&board, &oop_range, &ip_range, pot, stack, &street, iterations, bet_sizes.as_deref(), raise_sizes.as_deref(), format.as_deref(), &output, skip_cum_strategy, no_dcfr, depth_limit.as_deref(), valuenet.as_deref(), allin_pot_ratio, allin_threshold, max_raises, no_donk, geometric, exploration_eps, smooth_threshold, entropy_bonus, entropy_anneal, entropy_root_only, opp_dilute, softmax_temp, lcfr, &algorithm, purify, passive_tiebreak, &per_street, rake, rake_cap, qre_lambda, qre_damping, qre_anneal, no_iso, rm_floor, alternating, t_weight, frozen_root.as_deref(), two_phase, check_bias, dcfr_gamma, dcfr_alpha, pref_delta, pref_beta, pref_beta_all, pruning, combo_bias.as_deref(), frozen_warmup, unfreeze_decay, &node_lock);
         }
         Commands::Chart { blueprint, output } => {
             cmd_chart(&blueprint, &output);
@@ -608,6 +628,107 @@ fn parse_gtoplus_frozen_root(path: &str) -> Box<[f32; 1326]> {
     frozen
 }
 
+/// Parse a single `--node-lock` specification string into an (action_seq, NodeLock) pair.
+///
+/// Format: `"[action_path:]player:freq1,freq2,..."`
+/// - `action_path`  — `>`-separated action names (empty = root); omit entire field for root
+/// - `player`       — `"oop"` or `"ip"`
+/// - `freq1,...`    — per-action frequencies (auto-normalized)
+///
+/// Examples:
+///   `"oop:1,0"`           → root OOP locked to check-only
+///   `"check:ip:1,1"`      → after check, IP locked to 50/50
+///   `"check>bet 50%:oop:0,1"` → after check → bet 50%, OOP locked to call-only
+fn parse_node_lock(s: &str) -> (Vec<dcfr_solver::game::Action>, NodeLock) {
+    use dcfr_solver::game::{Action, BetSize};
+
+    /// Parse a single action token (matches Action::Display format from game.rs).
+    fn parse_action(tok: &str) -> Action {
+        let tok = tok.trim();
+        match tok.to_lowercase().as_str() {
+            "fold" => Action::Fold,
+            "check" => Action::Check,
+            "call" => Action::Call,
+            "allin" | "all-in" | "all_in" => Action::AllIn,
+            _ => {
+                // "bet N%", "bet N/D", "bet Nx", "bet N bb"
+                if let Some(rest) = tok.strip_prefix("bet ").or_else(|| tok.strip_prefix("bet_")) {
+                    let rest = rest.trim();
+                    if let Some(pct) = rest.strip_suffix('%') {
+                        let n: i32 = pct.trim().parse().expect("invalid bet pct");
+                        return Action::Bet(BetSize::Frac(n, 100));
+                    }
+                    if let Some(x) = rest.strip_suffix('x') {
+                        let n: i32 = x.trim().parse().expect("invalid bet multiplier");
+                        return Action::Bet(BetSize::Frac(n, 1));
+                    }
+                    if rest.contains('/') {
+                        let parts: Vec<&str> = rest.splitn(2, '/').collect();
+                        let n: i32 = parts[0].trim().parse().expect("invalid bet frac n");
+                        let d: i32 = parts[1].trim().parse().expect("invalid bet frac d");
+                        return Action::Bet(BetSize::Frac(n, d));
+                    }
+                    if let Some(bb) = rest.strip_suffix("bb") {
+                        let n: i32 = bb.trim().parse().expect("invalid bet bb");
+                        return Action::Bet(BetSize::Bb(n));
+                    }
+                    // bare integer → treat as percent
+                    if let Ok(n) = rest.parse::<i32>() {
+                        return Action::Bet(BetSize::Frac(n, 100));
+                    }
+                    panic!("cannot parse action token: '{}'", tok);
+                } else {
+                    panic!("cannot parse action token: '{}'", tok);
+                }
+            }
+        }
+    }
+
+    // Split into at most 3 fields on ':'
+    // Field layout:
+    //   2 fields → root:  player:freqs
+    //   3 fields → node:  action_path:player:freqs   (action_path uses '>' to separate actions)
+    let parts: Vec<&str> = s.splitn(3, ':').collect();
+    let (action_path_str, player_str, freqs_str) = match parts.len() {
+        2 => ("", parts[0], parts[1]),
+        3 => (parts[0], parts[1], parts[2]),
+        _ => panic!("invalid --node-lock format: '{}'. Expected 'player:freqs' or 'action_path:player:freqs'", s),
+    };
+
+    let player: u8 = match player_str.trim().to_lowercase().as_str() {
+        "oop" | "0" => OOP,
+        "ip"  | "1" => IP,
+        _ => panic!("invalid player '{}' in --node-lock '{}': use 'oop' or 'ip'", player_str, s),
+    };
+
+    // Parse action path
+    let action_seq: Vec<Action> = if action_path_str.trim().is_empty() {
+        vec![] // root
+    } else {
+        action_path_str.split('>').map(|tok| parse_action(tok)).collect()
+    };
+
+    // Parse frequencies
+    let raw_freqs: Vec<f32> = freqs_str.split(',')
+        .map(|tok| tok.trim().parse::<f32>().expect("invalid frequency in --node-lock"))
+        .collect();
+
+    if raw_freqs.is_empty() {
+        panic!("--node-lock '{}': no frequencies provided", s);
+    }
+
+    // Normalize
+    let total: f32 = raw_freqs.iter().sum();
+    let frequencies = if total > 0.0 {
+        raw_freqs.iter().map(|&f| f / total).collect()
+    } else {
+        let n = raw_freqs.len();
+        vec![1.0 / n as f32; n]
+    };
+
+    (action_seq, NodeLock { player, frequencies })
+}
+
 fn cmd_solve(
     board_str: &str,
     oop_range_str: &str,
@@ -662,6 +783,7 @@ fn cmd_solve(
     combo_bias_file: Option<&str>,
     frozen_warmup: u32,
     unfreeze_decay: f32,
+    node_locks_str: &[String],
 ) {
     let board_cards = parse_cards(board_str).expect("invalid board cards");
     let mut board = Hand::new();
@@ -812,6 +934,22 @@ fn cmd_solve(
     }
 
     let mut solver = SubgameSolver::new(config);
+
+    // Apply node locks (must happen before solve so tree-build resolves them)
+    if !node_locks_str.is_empty() {
+        println!("  Node locks ({}):", node_locks_str.len());
+        for s in node_locks_str {
+            let (action_seq, lock) = parse_node_lock(s);
+            let path_str = if action_seq.is_empty() {
+                "root".to_string()
+            } else {
+                action_seq.iter().map(|a| format!("{}", a)).collect::<Vec<_>>().join(" > ")
+            };
+            let player_str = if lock.player == OOP { "OOP" } else { "IP" };
+            println!("    Lock {} at [{}]: freqs={:?}", player_str, path_str, lock.frequencies);
+            solver.node_locks.add_lock(action_seq, lock);
+        }
+    }
 
     // Load frozen root strategy from GTO+ file
     if let Some(fr_path) = frozen_root_file {
