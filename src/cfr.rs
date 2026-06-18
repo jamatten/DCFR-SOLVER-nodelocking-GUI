@@ -16,6 +16,7 @@ use crate::card::{combo_from_index, Card, Hand, NUM_COMBOS, CARD_COMBOS};
 use crate::eval::{evaluate, Strength};
 use crate::game::{Action, BetConfig, GameState, NodeType, Player, Street, TerminalType, OOP, IP};
 use crate::iso::{canonical_next_cards, compose_perms};
+use crate::nodelock::{NodeLock, NodeLocks};
 use crate::range::Range;
 use std::cell::{Cell, RefCell};
 use std::sync::Arc;
@@ -826,6 +827,8 @@ pub struct SubgameSolver {
     pub(crate) arena: RegretArena,
     /// Maps action sequence → tree node ID (for public API lookups only).
     node_index: FxHashMap<Vec<Action>, u32>,
+    /// Node locks: fixed strategies at specific decision nodes.
+    pub node_locks: NodeLocks,
     /// Precomputed showdown data per board.
     pub(crate) sd_cache: ShowdownCache,
     pub(crate) root_id: u32,
@@ -847,6 +850,7 @@ impl SubgameSolver {
             cfr: Vec::new(),
             arena: RegretArena::empty(),
             node_index: FxHashMap::default(),
+            node_locks: NodeLocks::new(),
             sd_cache: ShowdownCache::new(),
             root_id: 0,
             iteration: 0,
@@ -860,6 +864,24 @@ impl SubgameSolver {
     #[cfg(feature = "nn")]
     pub fn set_valuenet(&mut self, vn: Arc<crate::valuenet::ValueNet>) {
         self.valuenet = Some(vn);
+    }
+
+    /// Add a node lock at the given action sequence.
+    /// Must be called BEFORE `solve()`.
+    /// `action_seq` is the path from root (empty = root node).
+    /// `lock` specifies the player and per-action frequencies to fix.
+    pub fn add_node_lock(&mut self, action_seq: Vec<Action>, lock: NodeLock) {
+        self.node_locks.add_lock(action_seq, lock);
+    }
+
+    /// Replace all node locks at once.
+    pub fn set_node_locks(&mut self, locks: NodeLocks) {
+        self.node_locks = locks;
+    }
+
+    /// Return a reference to the current node locks.
+    pub fn get_node_locks(&self) -> &NodeLocks {
+        &self.node_locks
     }
 
     /// Number of decision nodes in the tree.
@@ -938,6 +960,12 @@ impl SubgameSolver {
         {
             let mut action_seq = Vec::with_capacity(20);
             self.root_id = self.build_tree(&root_state, &mut action_seq);
+        }
+
+        // Phase 1a-post: Resolve node locks (map action seqs → tree node IDs for fast lookup)
+        self.node_locks.resolve_node_ids(&self.node_index);
+        if !self.node_locks.is_empty() {
+            println!("  NodeLocks: {} locked node(s) resolved", self.node_locks.id_to_lock.len());
         }
 
         // Phase 1b: Allocate arena and assign offsets (compact: live_count * n_actions per node)
@@ -1091,7 +1119,7 @@ impl SubgameSolver {
                     let dummy = [0.0f32; NUM_COMBOS];
                     cfr_traverse(
                         &self.tree, &self.cfr, arena_ptr, &self.config, &self.sd_cache,
-                        &self.combo_map,
+                        &self.combo_map, &self.node_locks,
                         &root_state, &mut reach, &dummy, traverser, self.root_id,
                         &[], &mut _discard,
                     );
@@ -1099,7 +1127,7 @@ impl SubgameSolver {
                     let pure_t = reach[traverser as usize];
                     cfr_traverse(
                         &self.tree, &self.cfr, arena_ptr, &self.config, &self.sd_cache,
-                        &self.combo_map,
+                        &self.combo_map, &self.node_locks,
                         &root_state, &mut reach, &pure_t, traverser, self.root_id,
                         &[], &mut _discard,
                     );
@@ -2249,7 +2277,7 @@ impl SubgameSolver {
                 _ => return (avg_norm, nz_frac, 0.0),
             };
             let cfr_node = &self.cfr[root_cfr_idx];
-            let n = cfr_node.n_actions;
+            // let n = cfr_node.n_actions;
             let lc = cfr_node.live_count;
             let cur = compute_avg_strat_flat(cfr_node, arena, self.config.exploration_eps, self.config.softmax_temp);
             if prev.len() == cur.len() {
@@ -2837,6 +2865,7 @@ fn cfr_traverse(
     config: &SubgameConfig,
     sd_cache: &ShowdownCache,
     combo_map: &ComboMap,
+    node_locks: &NodeLocks,
     state: &GameState,
     reach: &mut [[f32; NUM_COMBOS]; 2],
     pure_t_reach: &[f32; NUM_COMBOS],
@@ -2866,7 +2895,7 @@ fn cfr_traverse(
             }
         }
         TreeNode::Chance { children, iso_perms, n_actual } => {
-            chance_utility(tree, cfr, arena_ptr, config, sd_cache, combo_map, state, reach, pure_t_reach, traverser,
+            chance_utility(tree, cfr, arena_ptr, config, sd_cache, combo_map, node_locks, state, reach, pure_t_reach, traverser,
                 children, iso_perms, *n_actual, ancestor_perms, out);
         }
         TreeNode::Decision { player, actions, children, cfr_idx } => {
@@ -2912,6 +2941,24 @@ fn cfr_traverse(
                     regret_match_all(regrets, scale, n_actions, live_count, &mut strat, expl_eps, rm_floor);
                 }
             }
+
+            // Nodelocking: if this node has a fixed strategy for the acting player,
+            // override strat with the locked frequencies (same for all combos).
+            let is_locked_node = if let Some(lock) = node_locks.get_lock_for_node(node_id) {
+                if lock.player == player && n_actions > 0 {
+                    let freqs = &lock.frequencies;
+                    let n_freqs = freqs.len().min(n_actions);
+                    let sum: f32 = freqs[..n_freqs].iter().sum();
+                    let inv = if sum > 1e-12 { 1.0 / sum } else { 1.0 / n_actions as f32 };
+                    for a in 0..n_actions {
+                        let p_a = if a < n_freqs { freqs[a] * inv } else { 0.0 };
+                        for c in 0..live_count {
+                            strat[a][c] = p_a;
+                        }
+                    }
+                    true
+                } else { false }
+            } else { false };
 
             // Frozen root: override strategy with fixed probabilities.
             // Only applies at root (cfr_idx=0) for the root player (OOP).
@@ -2995,7 +3042,7 @@ fn cfr_traverse(
                     let next_state = state.apply(actions[a]);
                     vec_mul(&mut reach[p][..live_count], &saved_reach[..live_count], &strat[a][..live_count]);
                     cfr_traverse(
-                        tree, cfr, arena_ptr, config, sd_cache, combo_map, &next_state,
+                        tree, cfr, arena_ptr, config, sd_cache, combo_map, node_locks, &next_state,
                         reach, pure_t_reach, traverser, children[a],
                         ancestor_perms, &mut action_utils[a],
                     );
@@ -3012,7 +3059,7 @@ fn cfr_traverse(
                         // pure_t_reach is only used for cum_strategy accumulation.
                         // When skip_cum is true, skip the expensive copy+multiply.
                         cfr_traverse(
-                            tree, cfr, arena_ptr, config, sd_cache, combo_map, &next_state,
+                            tree, cfr, arena_ptr, config, sd_cache, combo_map, node_locks, &next_state,
                             reach, pure_t_reach, traverser, children[a],
                             ancestor_perms, &mut action_utils[a],
                         );
@@ -3023,7 +3070,7 @@ fn cfr_traverse(
                             next_pure_t[c] *= strat_a[c];
                         }
                         cfr_traverse(
-                            tree, cfr, arena_ptr, config, sd_cache, combo_map, &next_state,
+                            tree, cfr, arena_ptr, config, sd_cache, combo_map, node_locks, &next_state,
                             reach, &next_pure_t, traverser, children[a],
                             ancestor_perms, &mut action_utils[a],
                         );
@@ -3087,9 +3134,9 @@ fn cfr_traverse(
                     }
                 }
 
-                // Frozen root: skip regret update (strategy is fixed externally).
+                // Frozen root or locked node: skip regret update (strategy is fixed externally).
                 // early_regret_buf will be dropped, which is fine.
-                if !is_frozen_root {
+                if !is_frozen_root && !is_locked_node {
 
                 // Regret update: reuse early_regret_buf (already decoded in Phase 1.1).
                 // This eliminates a second i16→f32 decode pass over regret_len elements.
@@ -3230,6 +3277,7 @@ fn chance_utility(
     config: &SubgameConfig,
     sd_cache: &ShowdownCache,
     combo_map: &ComboMap,
+    node_locks: &NodeLocks,
     state: &GameState,
     reach: &[[f32; NUM_COMBOS]; 2],
     pure_t_reach: &[f32; NUM_COMBOS],
@@ -3250,6 +3298,7 @@ fn chance_utility(
     // SAFETY: Each child subtree has disjoint CFR indices (built depth-first).
     // arena_ptr is a raw pointer — each child accesses disjoint regions via regret_offset.
     let arena_ptr_usize = arena_ptr as usize; // for Send across par_iter
+    let node_locks_ptr = node_locks as *const NodeLocks as usize; // for Send across par_iter
 
     // Traverse only canonical children, composing ancestor_perms for nested chance
     let card_utils: Vec<[f32; NUM_COMBOS]> = children
@@ -3268,9 +3317,11 @@ fn chance_utility(
             let next_state = state.deal_street(&[card]);
             let child_ancestor = compose_perms(ancestor_perms, &iso_perms[i]);
             let ap = arena_ptr_usize as *mut ArenaInt;
+            // SAFETY: node_locks is immutable and outlives the traversal.
+            let nl = unsafe { &*(node_locks_ptr as *const NodeLocks) };
             let mut result = [0.0f32; NUM_COMBOS];
             if config.skip_cum_strategy {
-                cfr_traverse(tree, cfr, ap, config, sd_cache, combo_map, &next_state,
+                cfr_traverse(tree, cfr, ap, config, sd_cache, combo_map, nl, &next_state,
                     &mut next_reach, pure_t_reach, traverser, child_id, &child_ancestor, &mut result);
             } else {
                 let mut next_pure_t = *pure_t_reach;
@@ -3279,7 +3330,7 @@ fn chance_utility(
                     if compact < 0 { continue; }
                     next_pure_t[compact as usize] = 0.0;
                 }
-                cfr_traverse(tree, cfr, ap, config, sd_cache, combo_map, &next_state,
+                cfr_traverse(tree, cfr, ap, config, sd_cache, combo_map, nl, &next_state,
                     &mut next_reach, &next_pure_t, traverser, child_id, &child_ancestor, &mut result);
             }
             result
@@ -3937,5 +3988,64 @@ mod tests {
         let mut solver = SubgameSolver::new(config);
         solver.solve();
         assert!(solver.num_decision_nodes() > 0);
+    }
+
+    /// Verify nodelocking: lock OOP root to check=100%, then IP should find
+    /// a best response where they never call a bet (since OOP never bets).
+    /// The locked strategy should appear in OOP's average strategy output.
+    #[test]
+    fn test_nodelock_root_check_only() {
+        use crate::game::OOP;
+        use crate::nodelock::NodeLock;
+
+        let oop_range = Range::parse("AA,KK").unwrap();
+        let ip_range = Range::parse("QQ,JJ").unwrap();
+
+        let config = SubgameConfig {
+            board: river_board(),
+            pot: 100,
+            stacks: [200, 200],
+            ranges: [oop_range, ip_range],
+            iterations: 200,
+            street: Street::River,
+            warmup_frac: 0.2,
+            bet_config: None,
+            dcfr: true,
+            cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0,
+        };
+
+        // Determine root actions and lock OOP to check-only (action 0 = Check = 100%)
+        let mut solver = SubgameSolver::new(config);
+
+        // We need to know n_actions at root — build the tree first via solve_with_callback
+        // Strategy: add the lock before solve(), using add_node_lock.
+        // Root action seq = empty vec. OOP has check + some bets at root.
+        // Lock OOP to check 100%: frequencies = [1.0, 0.0, 0.0, ...]
+        // We'll set enough frequencies and normalization handles the rest.
+        let lock = NodeLock {
+            player: OOP,
+            frequencies: vec![1.0, 0.0], // check=100%, bet=0%
+        };
+        solver.add_node_lock(vec![], lock);
+        solver.solve();
+
+        // Verify: OOP's root strategy should show check ≈ 100% for all combos
+        let strategy = solver.get_strategy(&[]).expect("root node should exist");
+        let cm = solver.combo_map();
+        for (orig_idx, action_probs) in &strategy {
+            let compact = cm.combo_to_live[*orig_idx as usize];
+            if compact < 0 { continue; }
+            // Find check frequency
+            let check_freq = action_probs.iter()
+                .find(|(a, _)| matches!(a, crate::game::Action::Check))
+                .map(|(_, f)| *f)
+                .unwrap_or(0.0);
+            assert!(
+                check_freq > 0.9,
+                "Locked node: OOP combo {} should check ~100%, got {:.3}",
+                orig_idx, check_freq
+            );
+        }
     }
 }

@@ -895,7 +895,7 @@ fn cmd_solve(
             println!("  Phase 1 done: {} indifferent → 50/50, {} kept", indiff_count, kept_count);
 
             // Phase 2: re-solve with frozen root
-            let mut config2 = SubgameConfig {
+            let /*mut*/ config2 = SubgameConfig {
                 board, pot, stacks: [stack, stack],
                 ranges: [solver.config.ranges[0].clone(), solver.config.ranges[1].clone()],
                 iterations, street, warmup_frac: 0.0, bet_config: solver.config.bet_config.clone(),

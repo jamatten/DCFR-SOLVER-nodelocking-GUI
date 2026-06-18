@@ -19,7 +19,6 @@ libc = "0.2"
 [features]
 nn = ["ort"]
 i32-arena = []
-
 [dependencies.ort]
 version = "2.0.0-rc.11"
 optional = true
@@ -28,4 +27,10 @@ optional = true
 opt-level = 3
 lto = "fat"
 codegen-units = 1
-debug = true
+debug = false
+
+[profile.dev]
+opt-level = 0
+
+[profile.dev.package."*"]
+opt-level = 3

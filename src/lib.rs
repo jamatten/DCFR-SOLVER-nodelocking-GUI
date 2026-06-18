@@ -6,6 +6,7 @@ pub mod iso;
 pub mod infoset;
 pub mod range;
 pub mod cfr;
+pub mod nodelock;
 pub mod abstraction;
 pub mod mccfr;
 pub mod strategy;

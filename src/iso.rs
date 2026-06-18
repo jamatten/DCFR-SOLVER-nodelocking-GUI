@@ -688,10 +688,10 @@ mod tests {
         let mut seen = std::collections::HashSet::new();
         for cc in &canonical {
             assert!(seen.insert(cc.card), "duplicate canonical card {}", cc.card);
-            for perm in &cc.perms {
+            //for perm in &cc.perms {
                 // Each perm represents one isomorphic card — check perm is a valid permutation
                 // (identity check: perm[i] should differ from identity for at least one combo)
-            }
+            //}
         }
         println!("Paired 9h9c5d: {} canonical cards, {} total", canonical.len(), total_cards);
     }
