@@ -927,6 +927,7 @@ fn cmd_solve(
         pref_beta_all_nodes: pref_beta_all,
         pruning,
         combo_check_bias: None, frozen_warmup, unfreeze_decay,
+        early_stop_pct: 0.0,
     };
 
     if no_iso {
@@ -1053,6 +1054,7 @@ fn cmd_solve(
                 frozen_root: Some(frozen),
                 check_bias: 0.0,
                 pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0,
+                early_stop_pct: 0.0,
             };
             let mut solver2 = SubgameSolver::new(config2);
             println!("  Phase 2: re-solving with frozen root ({} iterations)...", iterations);
@@ -1483,6 +1485,7 @@ fn cmd_batch_run(
             current_iteration: 0,
             use_iso: true,
             rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0,
+            early_stop_pct: 0.0,
         };
 
         let spot_start = Instant::now();

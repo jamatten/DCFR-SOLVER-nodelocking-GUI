@@ -556,6 +556,9 @@ pub struct SubgameConfig {
     /// 0.0 = full reset, 0.1 = keep 10%. Lower values let post-unfreeze iterations
     /// dominate the average strategy, improving exploitability at the cost of diff.
     pub unfreeze_decay: f32,
+    /// Stop iterating early if exploitability (% of pot) falls at or below this threshold.
+    /// 0.0 = disabled (run all `iterations`). E.g. 0.3 = stop when expl ≤ 0.3% pot.
+    pub early_stop_pct: f32,
 }
 
 // ---------------------------------------------------------------------------
@@ -1156,6 +1159,14 @@ impl SubgameSolver {
 
             if self.iteration >= next_report || self.iteration == total {
                 callback(self.iteration, self);
+                // Early-stop: if threshold is set and exploitability is met, stop iterating.
+                // exploitability_pct() is already called inside the callback in the GUI,
+                // so this adds at most one extra call per report interval (not per iteration).
+                if self.config.early_stop_pct > 0.0
+                    && self.exploitability_pct() <= self.config.early_stop_pct
+                {
+                    break;
+                }
                 if every > 0 {
                     next_report += every;
                 } else {
@@ -4001,7 +4012,7 @@ mod tests {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -4024,7 +4035,7 @@ mod tests {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -4045,7 +4056,7 @@ mod tests {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -4072,7 +4083,7 @@ mod tests {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -4101,7 +4112,7 @@ mod tests {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0,
         };
 
         // Determine root actions and lock OOP to check-only (action 0 = Check = 100%)
