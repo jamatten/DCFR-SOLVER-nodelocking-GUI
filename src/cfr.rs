@@ -1412,6 +1412,95 @@ impl SubgameSolver {
         self.node_index.keys()
     }
 
+    /// Walk the solved tree along `action_seq`, multiplying each player's combo
+    /// weights by their strategy probability at each decision node in the path.
+    /// Returns reach-weighted [Range; 2] (index 0 = OOP, 1 = IP).
+    ///
+    /// This is the core primitive for turn/river re-solving in the GUI:
+    /// after solving the flop, call this with e.g. `[Check, Check]` to get
+    /// the updated OOP/IP ranges that arrive at the turn for that action line.
+    ///
+    /// Returns `None` if the tree has not been solved yet or the action
+    /// sequence leads to a non-decision node (e.g., an action that doesn't
+    /// exist at some point in the path).
+    pub fn extract_ranges_after_line(&self, action_seq: &[Action]) -> Option<[crate::range::Range; 2]> {
+        if self.tree.is_empty() { return None; }
+
+        let arena = self.arena.as_slice();
+        let cm = &self.combo_map;
+
+        // Start with initial reach weights in compact layout (live_count slots).
+        let mut reach = self.initial_reach();
+        let mut current_id = self.root_id;
+
+        for &action in action_seq {
+            match &self.tree[current_id as usize] {
+                TreeNode::Decision { player: act_p, actions: node_acts, children: node_ch, cfr_idx } => {
+                    let p_idx = *act_p as usize;
+                    let a_idx = node_acts.iter().position(|&a| a == action)?;
+
+                    // Multiply the acting player's reach for every combo by their
+                    // average strategy probability for this action.
+                    let avg = compute_avg_strat_flat(
+                        &self.cfr[*cfr_idx as usize], arena,
+                        self.config.exploration_eps, self.config.softmax_temp,
+                    );
+                    let n = node_acts.len();
+                    for c in 0..cm.live_count {
+                        reach[p_idx][c] *= avg[c * n + a_idx];
+                    }
+
+                    current_id = node_ch[a_idx];
+                }
+                _ => return None, // mid-sequence non-decision node
+            }
+        }
+
+        // Scatter compact reach back to original 1326-combo weights.
+        let mut oop_w = [0.0f32; NUM_COMBOS];
+        let mut ip_w  = [0.0f32; NUM_COMBOS];
+        for c in 0..cm.live_count {
+            let orig = cm.live_to_combo[c] as usize;
+            oop_w[orig] = reach[0][c];
+            ip_w[orig]  = reach[1][c];
+        }
+
+        Some([
+            crate::range::Range { weights: oop_w },
+            crate::range::Range { weights: ip_w  },
+        ])
+    }
+
+    /// Simulate the game state along `action_seq` and return the resulting
+    /// `GameState` (pot, stacks, board, street, …).
+    ///
+    /// Use together with `extract_ranges_after_line` to build the full config
+    /// for a turn/river re-solve:
+    /// ```
+    /// let state  = solver.game_state_after_line(&line)?; // pot/stacks
+    /// let ranges = solver.extract_ranges_after_line(&line)?; // updated weights
+    /// // now build SubgameConfig { board: state.board.add(turn_card), pot: state.pot, ... }
+    /// ```
+    pub fn game_state_after_line(&self, action_seq: &[Action]) -> Option<GameState> {
+        if self.tree.is_empty() { return None; }
+
+        let mut state = self.root_state();
+        let mut current_id = self.root_id;
+
+        for &action in action_seq {
+            match &self.tree[current_id as usize] {
+                TreeNode::Decision { actions: node_acts, children: node_ch, .. } => {
+                    let a_idx = node_acts.iter().position(|&a| a == action)?;
+                    state = state.apply(action);
+                    current_id = node_ch[a_idx];
+                }
+                _ => return None,
+            }
+        }
+
+        Some(state)
+    }
+
     /// Compute per-combo EV at root for the given player using average strategy.
     /// Returns array indexed by original combo index (0..1326).
     pub fn compute_ev(&self, player: Player) -> [f32; NUM_COMBOS] {

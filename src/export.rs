@@ -206,13 +206,24 @@ function handCategory(h) {{
 }}
 function renderSidebar() {{
   const sb = document.getElementById('sidebar');
-  DATA.strategy.forEach((ns, i) => {{
+  const getDepth = s => (!s || s === 'root') ? 0 : s.split(' \u2192 ').length;
+  const order = DATA.strategy
+    .map((ns, i) => ({{ns, i}}))
+    .sort((a, b) => {{
+      const da = getDepth(a.ns.node), db = getDepth(b.ns.node);
+      if (da !== db) return da - db;
+      return (a.ns.node || '').localeCompare(b.ns.node || '');
+    }});
+  order.forEach(({{ns, i}}, si) => {{
+    const depth = getDepth(ns.node);
     const d = document.createElement('div');
-    d.className = 'node' + (i === 0 ? ' active' : '');
+    d.className = 'node' + (si === 0 ? ' active' : '');
+    d.style.paddingLeft = (16 + depth * 12) + 'px';
     d.innerHTML = `<div>${{ns.node || 'root'}}</div><div class="player">${{ns.player}} (${{ns.combos.length}} combos)</div>`;
     d.onclick = () => {{ document.querySelectorAll('.node').forEach(n => n.classList.remove('active')); d.classList.add('active'); renderNode(i); }};
     sb.appendChild(d);
   }});
+  return order.length > 0 ? order[0].i : 0;
 }}
 function renderNode(idx) {{
   const ns = DATA.strategy[idx];
@@ -330,8 +341,8 @@ let hdr = `Board: ${{DATA.config.board}} | Street: ${{DATA.config.street}} | Pot
 if (DATA.exploitability_pct != null) hdr += ` | Expl: ${{DATA.exploitability_pct.toFixed(4)}}%`;
 if (DATA.oop_ev != null && DATA.ip_ev != null) hdr += ` | OOP EV: ${{DATA.oop_ev.toFixed(2)}} | IP EV: ${{DATA.ip_ev.toFixed(2)}}`;
 document.getElementById('header-info').textContent = hdr;
-renderSidebar();
-if (DATA.strategy.length > 0) renderNode(0);
+const firstIdx = renderSidebar();
+if (DATA.strategy.length > 0) renderNode(firstIdx);
 </script>
 </body>
 </html>"##, board = self.config.board, street = self.config.street, json = json_data)
