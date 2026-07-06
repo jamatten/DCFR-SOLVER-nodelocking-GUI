@@ -229,6 +229,11 @@ fn solve_subgame(
         rake_cap: 0.0,
         exploration_eps: 0.0,
         entropy_bonus: 0.0, opp_dilute: 0.0, softmax_temp: 0.0,
+        entropy_anneal: false, entropy_root_only: false, current_iteration: 0, use_iso: true,
+        rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None,
+        check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false,
+        pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0,
+        early_stop_pct: 0.0, par_decision_depth: u32::MAX,
     };
 
     let mut solver = SubgameSolver::new(config);

@@ -612,7 +612,7 @@ impl SubgameSolver {
         // Build tree if not already built
         if self.tree.is_empty() {
             let mut action_seq = Vec::with_capacity(20);
-            self.root_id = self.build_tree(&root_state, &mut action_seq);
+            self.root_id = self.build_tree(&root_state, &mut action_seq, 0);
             self.remap_iso_perms();
             self.precompute_showdowns();
         }

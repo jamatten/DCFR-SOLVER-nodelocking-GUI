@@ -559,6 +559,16 @@ pub struct SubgameConfig {
     /// Stop iterating early if exploitability (% of pot) falls at or below this threshold.
     /// 0.0 = disabled (run all `iterations`). E.g. 0.3 = stop when expl ≤ 0.3% pot.
     pub early_stop_pct: f32,
+    /// Parallel decision-node depth cutoff for action fan-out.
+    /// Decision nodes at `decision_depth < par_decision_depth` parallelize their
+    /// action-children via Rayon; deeper nodes fall back to sequential traversal
+    /// to avoid overhead on small subtrees.
+    ///
+    /// u32::MAX = disabled (all sequential, default — safe and backward-compatible).
+    /// Recommended starting values: 2 for flop spots with 3+ raise sizes,
+    ///                              1 for turn/river-only games.
+    /// 0 = parallelize root decision node only.
+    pub par_decision_depth: u32,
 }
 
 // ---------------------------------------------------------------------------
@@ -672,6 +682,10 @@ pub struct CfrData {
     pub regret_offset: usize,           // offset into RegretArena (in ArenaInt units)
     pub regret_scale: Cell<f32>,        // ArenaInt→f32 decode: f32_val = val * scale
     pub cum_strategy: Option<Vec<f32>>, // [live_count * n_actions], lazy-allocated
+    /// Decision-node depth from the root (0 = root decision, 1 = first child decision, ...).
+    /// Chance nodes are transparent: only Decision nodes increment this counter.
+    /// Used by par_decision_depth: nodes at depth < cutoff parallelize their action-children.
+    pub decision_depth: u32,
 }
 
 // SAFETY: CfrData is only accessed with disjoint indices across threads.
@@ -680,13 +694,14 @@ pub struct CfrData {
 unsafe impl Sync for CfrData {}
 
 impl CfrData {
-    fn new(n_actions: usize, live_count: usize, regret_offset: usize) -> Self {
+    fn new(n_actions: usize, live_count: usize, regret_offset: usize, decision_depth: u32) -> Self {
         CfrData {
             n_actions,
             live_count,
             regret_offset,
             regret_scale: Cell::new(0.0),
             cum_strategy: None,
+            decision_depth,
         }
     }
 
@@ -960,9 +975,10 @@ impl SubgameSolver {
         let root_state = self.root_state();
 
         // Phase 1a: Build tree (CfrData created with placeholder offset=0)
+        // decision_depth=0 at root; build_tree increments only at Decision nodes.
         {
             let mut action_seq = Vec::with_capacity(20);
-            self.root_id = self.build_tree(&root_state, &mut action_seq);
+            self.root_id = self.build_tree(&root_state, &mut action_seq, 0);
         }
 
         // Phase 1a-post: Resolve node locks (map action seqs → tree node IDs for fast lookup)
@@ -1259,8 +1275,10 @@ impl SubgameSolver {
     }
 
     /// Recursively discover and create all tree nodes.
+    /// `decision_depth` = number of Decision nodes above this one (0 = root decision).
+    /// Chance nodes are transparent: they pass through `decision_depth` unchanged.
     /// Returns the tree node ID of the created node.
-    pub(crate) fn build_tree(&mut self, state: &GameState, action_seq: &mut Vec<Action>) -> u32 {
+    pub(crate) fn build_tree(&mut self, state: &GameState, action_seq: &mut Vec<Action>, decision_depth: u32) -> u32 {
         match state.node_type() {
             NodeType::Terminal(TerminalType::Fold(folder)) => {
                 let id = self.tree.len() as u32;
@@ -1288,7 +1306,7 @@ impl SubgameSolver {
                 }
 
                 // Isomorphic card deduction: only build subtrees for canonical cards.
-                // Isomorphic cards' contributions are recovered via combo permutations.
+                // Chance nodes are transparent: pass decision_depth unchanged.
                 let dead = state.board;
                 let n_actual = (0..52u8).filter(|&c| !dead.contains(c)).count() as u8;
 
@@ -1298,7 +1316,7 @@ impl SubgameSolver {
                     let canonical = canonical_next_cards(dead);
                     for cc in &canonical {
                         let next = state.deal_street(&[cc.card]);
-                        let child_id = self.build_tree(&next, action_seq);
+                        let child_id = self.build_tree(&next, action_seq, decision_depth);
                         children.push((cc.card, child_id));
                         iso_perms.push(cc.perms.clone());
                     }
@@ -1307,7 +1325,7 @@ impl SubgameSolver {
                     for card in 0..52u8 {
                         if dead.contains(card) { continue; }
                         let next = state.deal_street(&[card]);
-                        let child_id = self.build_tree(&next, action_seq);
+                        let child_id = self.build_tree(&next, action_seq, decision_depth);
                         children.push((card, child_id));
                         iso_perms.push(Vec::new()); // no perms
                     }
@@ -1320,7 +1338,8 @@ impl SubgameSolver {
                 let actions = state.actions();
                 let n_actions = actions.len();
                 let cfr_idx = self.cfr.len() as u32;
-                self.cfr.push(CfrData::new(n_actions, self.combo_map.live_count, 0));
+                // Store decision_depth in CfrData for par_decision_depth cutoff.
+                self.cfr.push(CfrData::new(n_actions, self.combo_map.live_count, 0, decision_depth));
 
                 // Reserve slot (children filled after recursion)
                 let id = self.tree.len() as u32;
@@ -1337,7 +1356,8 @@ impl SubgameSolver {
                 for action in &actions {
                     let next = state.apply(*action);
                     action_seq.push(*action);
-                    let child_id = self.build_tree(&next, action_seq);
+                    // Children are one decision level deeper.
+                    let child_id = self.build_tree(&next, action_seq, decision_depth + 1);
                     action_seq.pop();
                     children.push(child_id);
                 }
@@ -3127,53 +3147,149 @@ fn cfr_traverse(
                 }
             }
 
-            // Phase 1.2: In-place reach modification with save/restore.
-            // Key invariant: reach[traverser] is NEVER modified at traverser's nodes.
-            // Only reach[opp] is modified at opponent nodes.
-            if player != traverser {
-                // Opponent node: save opp reach once, set per action, restore once.
-                // Only save/restore live_count elements to avoid copying dead combos.
-                // SAFETY: Only [..live_count] is used by all hot-path code.
-                // SAFETY: Only [..live_count] elements are read/written.
-                // Using zeroed init avoids UB from MaybeUninit::assume_init on floats.
-                let mut saved_reach = [0.0f32; NUM_COMBOS];
-                saved_reach[..live_count].copy_from_slice(&reach[p][..live_count]);
-                for a in 0..n_actions {
-                    let next_state = state.apply(actions[a]);
-                    vec_mul(&mut reach[p][..live_count], &saved_reach[..live_count], &strat[a][..live_count]);
-                    cfr_traverse(
-                        tree, cfr, arena_ptr, config, sd_cache, combo_map, node_locks, &next_state,
-                        reach, pure_t_reach, traverser, children[a],
-                        ancestor_perms, &mut action_utils[a],
-                    );
+            // Phase 1.2: Child traversal — sequential or parallel action fan-out.
+            // par_decision_depth < u32::MAX enables parallelism; nodes at
+            // decision_depth < cutoff fan out their action-children via Rayon.
+            // Deeper nodes fall back to sequential to avoid overhead on small subtrees.
+            let use_par = config.par_decision_depth < u32::MAX
+                && cfr[cfr_idx].decision_depth < config.par_decision_depth
+                && n_actions > 1;
+
+            if use_par {
+                // Debug: verify sibling action children have disjoint cfr_idx ranges.
+                // This is guaranteed by depth-first build_tree — same invariant as chance par_iter.
+                #[cfg(debug_assertions)]
+                {
+                    for i in 0..n_actions {
+                        for j in (i + 1)..n_actions {
+                            let ci = match &tree[children[i] as usize] {
+                                TreeNode::Decision { cfr_idx: ci2, .. } => Some(*ci2 as usize),
+                                _ => None,
+                            };
+                            let cj = match &tree[children[j] as usize] {
+                                TreeNode::Decision { cfr_idx: cj2, .. } => Some(*cj2 as usize),
+                                _ => None,
+                            };
+                            if let (Some(ci_val), Some(cj_val)) = (ci, cj) {
+                                debug_assert_ne!(
+                                    ci_val, cj_val,
+                                    "Parallel sibling actions {} and {} share cfr_idx {}",
+                                    i, j, ci_val,
+                                );
+                            }
+                        }
+                    }
                 }
-                reach[p][..live_count].copy_from_slice(&saved_reach[..live_count]);
-            } else {
-                // Traverser node: reach unchanged, update pure_t_reach per action.
+
+                // Pre-compute per-action reach copies before parallel fan-out (sequential).
+                // opponent node: each child gets reach[p] weighted by strat[a].
+                // traverser node: reach is unchanged for all children.
+                let child_reaches: Vec<[[f32; NUM_COMBOS]; 2]> = if player != traverser {
+                    let mut saved = [0.0f32; NUM_COMBOS];
+                    saved[..live_count].copy_from_slice(&reach[p][..live_count]);
+                    (0..n_actions).map(|a| {
+                        let mut cr = *reach;
+                        vec_mul(&mut cr[p][..live_count], &saved[..live_count], &strat[a][..live_count]);
+                        cr
+                    }).collect()
+                } else {
+                    (0..n_actions).map(|_| *reach).collect()
+                };
+
+                // Pre-compute per-action pure_t_reach copies.
+                // traverser node (skip_cum=false): multiply by strat[a].
+                // all other cases: unchanged copy.
+                let child_pure_t: Vec<[f32; NUM_COMBOS]> =
+                    if player == traverser && !config.skip_cum_strategy {
+                        (0..n_actions).map(|a| {
+                            let mut npt = *pure_t_reach;
+                            let sa = &strat[a];
+                            for c in 0..live_count { npt[c] *= sa[c]; }
+                            npt
+                        }).collect()
+                    } else {
+                        (0..n_actions).map(|_| *pure_t_reach).collect()
+                    };
+
+                // SAFETY: Same disjoint-subtree guarantee as chance_utility's par_iter.
+                // Each action child has a non-overlapping cfr_idx region (depth-first build_tree).
+                // arena_ptr/node_locks are cast to usize for Send; recasted inside each task.
+                let arena_ptr_usize = arena_ptr as usize;
+                let node_locks_ptr = node_locks as *const NodeLocks as usize;
+
+                let par_utils: Vec<[f32; NUM_COMBOS]> = (0..n_actions)
+                    .into_par_iter()
+                    .map(|a| {
+                        if pruned[a] { return [0.0f32; NUM_COMBOS]; }
+                        let mut util = [0.0f32; NUM_COMBOS];
+                        let ap = arena_ptr_usize as *mut ArenaInt;
+                        let nl = unsafe { &*(node_locks_ptr as *const NodeLocks) };
+                        let next_state = state.apply(actions[a]);
+                        let mut cr = child_reaches[a];
+                        cfr_traverse(
+                            tree, cfr, ap, config, sd_cache, combo_map, nl,
+                            &next_state, &mut cr, &child_pure_t[a], traverser, children[a],
+                            ancestor_perms, &mut util,
+                        );
+                        util
+                    })
+                    .collect();
+
                 for a in 0..n_actions {
-                    // RBP: skip subtree for fully-pruned actions (strat=0 for all combos).
-                    // action_utils[a] has garbage — OK since strat[a]*garbage=0 in node_util.
-                    if pruned[a] { continue; }
-                    let next_state = state.apply(actions[a]);
-                    if config.skip_cum_strategy {
-                        // pure_t_reach is only used for cum_strategy accumulation.
-                        // When skip_cum is true, skip the expensive copy+multiply.
+                    action_utils[a][..live_count].copy_from_slice(&par_utils[a][..live_count]);
+                    action_utils[a][live_count] = 0.0;
+                }
+                // reach[p] is unchanged: each parallel task used its own reach copy.
+
+            } else {
+                // Sequential path — original in-place reach modification with save/restore.
+                // Key invariant: reach[traverser] is NEVER modified at traverser's nodes.
+                // Only reach[opp] is modified at opponent nodes.
+                if player != traverser {
+                    // Opponent node: save opp reach once, set per action, restore once.
+                    // Only save/restore live_count elements to avoid copying dead combos.
+                    // SAFETY: Only [..live_count] is used by all hot-path code.
+                    // SAFETY: Only [..live_count] elements are read/written.
+                    // Using zeroed init avoids UB from MaybeUninit::assume_init on floats.
+                    let mut saved_reach = [0.0f32; NUM_COMBOS];
+                    saved_reach[..live_count].copy_from_slice(&reach[p][..live_count]);
+                    for a in 0..n_actions {
+                        let next_state = state.apply(actions[a]);
+                        vec_mul(&mut reach[p][..live_count], &saved_reach[..live_count], &strat[a][..live_count]);
                         cfr_traverse(
                             tree, cfr, arena_ptr, config, sd_cache, combo_map, node_locks, &next_state,
                             reach, pure_t_reach, traverser, children[a],
                             ancestor_perms, &mut action_utils[a],
                         );
-                    } else {
-                        let mut next_pure_t = *pure_t_reach;
-                        let strat_a = &strat[a];
-                        for c in 0..live_count {
-                            next_pure_t[c] *= strat_a[c];
+                    }
+                    reach[p][..live_count].copy_from_slice(&saved_reach[..live_count]);
+                } else {
+                    // Traverser node: reach unchanged, update pure_t_reach per action.
+                    for a in 0..n_actions {
+                        // RBP: skip subtree for fully-pruned actions (strat=0 for all combos).
+                        // action_utils[a] has garbage — OK since strat[a]*garbage=0 in node_util.
+                        if pruned[a] { continue; }
+                        let next_state = state.apply(actions[a]);
+                        if config.skip_cum_strategy {
+                            // pure_t_reach is only used for cum_strategy accumulation.
+                            // When skip_cum is true, skip the expensive copy+multiply.
+                            cfr_traverse(
+                                tree, cfr, arena_ptr, config, sd_cache, combo_map, node_locks, &next_state,
+                                reach, pure_t_reach, traverser, children[a],
+                                ancestor_perms, &mut action_utils[a],
+                            );
+                        } else {
+                            let mut next_pure_t = *pure_t_reach;
+                            let strat_a = &strat[a];
+                            for c in 0..live_count {
+                                next_pure_t[c] *= strat_a[c];
+                            }
+                            cfr_traverse(
+                                tree, cfr, arena_ptr, config, sd_cache, combo_map, node_locks, &next_state,
+                                reach, &next_pure_t, traverser, children[a],
+                                ancestor_perms, &mut action_utils[a],
+                            );
                         }
-                        cfr_traverse(
-                            tree, cfr, arena_ptr, config, sd_cache, combo_map, node_locks, &next_state,
-                            reach, &next_pure_t, traverser, children[a],
-                            ancestor_perms, &mut action_utils[a],
-                        );
                     }
                 }
             }
@@ -4012,7 +4128,7 @@ mod tests {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -4035,7 +4151,7 @@ mod tests {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -4056,7 +4172,7 @@ mod tests {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -4083,7 +4199,7 @@ mod tests {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -4112,7 +4228,7 @@ mod tests {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
         };
 
         // Determine root actions and lock OOP to check-only (action 0 = Check = 100%)
