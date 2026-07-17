@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 use dcfr_solver::abstraction::EquityAbstraction;
 use dcfr_solver::card::{parse_cards, Hand};
 use dcfr_solver::cfr::{DcfrMode, SubgameConfig, SubgameSolver};
-use dcfr_solver::nodelock::{NodeLock, NodeLocks};
+use dcfr_solver::nodelock::NodeLock;
 use dcfr_solver::game::{OOP, IP};
 use dcfr_solver::export::{export_preflop_chart, SolveResult};
 use dcfr_solver::game::{BetConfig, BetSize, Street};

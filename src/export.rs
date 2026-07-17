@@ -43,6 +43,12 @@ pub struct ComboStrategy {
     pub hand: String,           // e.g., "AsKh"
     pub actions: Vec<ActionWeight>,
     pub ev: f32,
+    // Serialized as `rangeWeight` (camelCase) to match the GUI frontend's
+    // TypeScript interface. The Tauri `get_node_strategy` command already
+    // emits this field as `rangeWeight` via serde_json::json!, so this rename
+    // keeps `SolveResult::from_solver` consistent with that code path.
+    #[serde(default, rename = "rangeWeight")]
+    pub range_weight: f32,      // combo's frequency in the acting player's range (0.0–1.0)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -79,10 +85,13 @@ impl SolveResult {
         let oop_ev = solver.compute_ev(crate::game::OOP);
         let ip_ev = solver.compute_ev(crate::game::IP);
 
+        let oop_range_weights = &solver.config.ranges[0].weights;
+        let ip_range_weights = &solver.config.ranges[1].weights;
+
         // Extract root node strategy
         let mut strategies = Vec::new();
         if let Some(combos) = solver.get_strategy(&[]) {
-            let node_strat = build_node_strategy("root", "OOP", &combos, Some(&oop_ev));
+            let node_strat = build_node_strategy("root", "OOP", &combos, Some(&oop_ev), Some(oop_range_weights));
             strategies.push(node_strat);
         }
 
@@ -105,7 +114,8 @@ impl SolveResult {
                         ("IP", &ip_ev)
                     },
                 };
-                let node_strat = build_node_strategy(&node_desc, player, &combos, Some(ev_ref));
+                let range_weights = if player == "OOP" { oop_range_weights } else { ip_range_weights };
+                let node_strat = build_node_strategy(&node_desc, player, &combos, Some(ev_ref), Some(range_weights));
                 strategies.push(node_strat);
             }
         }
@@ -120,6 +130,42 @@ impl SolveResult {
             oop_ev: Some(oop_overall),
             ip_ev: Some(ip_overall),
         }
+    }
+
+    /// Export strategy even when skip_cum_strategy is enabled
+    pub fn from_solver_with_skip_cum_strategy(solver: &SubgameSolver) -> Self {
+        let mut result = Self::from_solver(solver);
+        
+        // If strategy is empty but we have iterations, force strategy computation
+        if result.strategy.is_empty() && solver.config.iterations > 0 {
+            let mut strategies = Vec::new();
+            
+            // Force computation of root strategy
+            if let Some(combos) = solver.get_strategy(&[]) {
+                let node_strat = build_node_strategy("root", "OOP", &combos, None, None);
+                strategies.push(node_strat);
+            }
+            
+            // Force computation for all decision nodes
+            for action_seq in solver.iter_decision_nodes() {
+                if action_seq.is_empty() {
+                    continue;
+                }
+                if let Some(combos) = solver.get_strategy(action_seq) {
+                    let node_desc = action_seq.iter()
+                        .map(|a| format!("{}", a))
+                        .collect::<Vec<_>>()
+                        .join(" → ");
+                    let player = if action_seq.len() % 2 == 0 { "OOP" } else { "IP" };
+                    let node_strat = build_node_strategy(&node_desc, player, &combos, None, None);
+                    strategies.push(node_strat);
+                }
+            }
+            
+            result.strategy = strategies;
+        }
+        
+        result
     }
 
     /// Serialize to JSON string.
@@ -354,6 +400,7 @@ fn build_node_strategy(
     player: &str,
     combos: &[(u16, Vec<(Action, f32)>)],
     ev_array: Option<&[f32; 1326]>,
+    range_weights: Option<&[f32; 1326]>,
 ) -> NodeStrategy {
     let mut combo_strategies = Vec::new();
 
@@ -361,8 +408,17 @@ fn build_node_strategy(
         let (c1, c2) = combo_from_index(idx);
         let hand = format!("{}{}", card_to_string(c1), card_to_string(c2));
 
+        // Include every action with a positive probability.  The previous
+        // `> 0.001` cutoff silently dropped rare (but non-zero) actions from
+        // the JSON, which broke the GUI's sidebar frequency filter: the
+        // frontend computes each node's frequency by searching the parent
+        // combos for the node's leading action, and when the action was
+        // filtered out the frequency evaluated to 0, hiding the node at any
+        // non-zero threshold.  The frontend already applies its own display
+        // thresholds (e.g. `uniqueActions`, bar/chip visibility), so emitting
+        // the full action set here does not clutter the UI.
         let actions: Vec<ActionWeight> = action_probs.iter()
-            .filter(|(_, p)| *p > 0.001)
+            .filter(|(_, p)| *p > 0.0)
             .map(|(a, p)| ActionWeight {
                 action: format!("{}", a),
                 weight: *p,
@@ -370,12 +426,14 @@ fn build_node_strategy(
             .collect();
 
         let ev = ev_array.map_or(0.0, |evs| evs[idx as usize]);
+        let range_weight = range_weights.map_or(1.0, |rw| rw[idx as usize]);
 
         if !actions.is_empty() {
             combo_strategies.push(ComboStrategy {
                 hand,
                 actions,
                 ev,
+                range_weight,
             });
         }
     }

@@ -720,6 +720,8 @@ impl CfrData {
     fn average_strategy(&self, combo: usize, arena: &[ArenaInt], expl_eps: f32, softmax_temp: f32) -> Vec<f32> {
         let n = self.n_actions;
         let mut strat = vec![0.0f32; n];
+        
+        // When cum_strategy exists, use it directly
         if let Some(ref cum) = self.cum_strategy {
             let mut total = 0.0f32;
             for a in 0..n {
@@ -729,9 +731,32 @@ impl CfrData {
             if total > 0.0 {
                 for s in &mut strat { *s /= total; }
             } else {
+            strat.fill(1.0 / n as f32);
+            }
+        } 
+        
+        // When no cum_strategy, compute from current regrets
+        else {
+            let lc = self.live_count;
+            let scale = self.regret_scale.get();
+            let mut pos_sum = 0.0f32;
+            
+            for a in 0..n {
+                let r = (arena[self.regret_offset + a * lc + combo] as f32 * scale).max(0.0);
+                strat[a] = r;
+                pos_sum += r;
+            }
+            
+            if pos_sum > 0.0 {
+                let inv = 1.0 / pos_sum;
+                for s in &mut strat { *s *= inv; }
+            } else {
                 strat.fill(1.0 / n as f32);
             }
-        } else if softmax_temp > 0.0 {
+        }
+        
+        // Apply softmax if needed
+        if softmax_temp > 0.0 {
             // QRE mode: softmax of cumulative regrets
             let regrets = &arena[self.regret_offset..self.regret_offset + self.regret_len()];
             let scale = self.regret_scale.get();
