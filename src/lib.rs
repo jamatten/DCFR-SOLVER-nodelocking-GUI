@@ -11,6 +11,7 @@ pub mod abstraction;
 pub mod mccfr;
 pub mod strategy;
 pub mod export;
+pub mod buckets;
 pub mod kuhn;
 #[cfg(feature = "nn")]
 pub mod valuenet;

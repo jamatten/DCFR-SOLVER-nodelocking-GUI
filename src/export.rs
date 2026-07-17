@@ -1,10 +1,12 @@
 /// JSON export for solver results.
 
-use crate::card::{card_to_string, combo_from_index};
+use crate::buckets::hand_bucket;
+use crate::card::{card_to_string, combo_from_index, Hand};
 use crate::cfr::SubgameSolver;
 use crate::game::Action;
 use crate::strategy::PreflopChart;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // ---------------------------------------------------------------------------
 // Subgame solve result
@@ -35,12 +37,13 @@ pub struct SolveConfig {
 pub struct NodeStrategy {
     pub node: String,           // action sequence description
     pub player: String,         // "OOP" or "IP"
+    pub street: String,         // "flop", "turn", or "river"
     pub combos: Vec<ComboStrategy>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ComboStrategy {
-    pub hand: String,           // e.g., "AsKh"
+    pub hand: String, // e.g., "AsKh"
     pub actions: Vec<ActionWeight>,
     pub ev: f32,
     // Serialized as `rangeWeight` (camelCase) to match the GUI frontend's
@@ -48,7 +51,11 @@ pub struct ComboStrategy {
     // emits this field as `rangeWeight` via serde_json::json!, so this rename
     // keeps `SolveResult::from_solver` consistent with that code path.
     #[serde(default, rename = "rangeWeight")]
-    pub range_weight: f32,      // combo's frequency in the acting player's range (0.0–1.0)
+    pub range_weight: f32, // combo's frequency in the acting player's range (0.0–1.0)
+    /// Semantic hand-bucket code (0..=17). Only populated for nodes whose
+    /// street matches the solve's starting street, to keep export fast and JSON small.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bucket: Option<u8>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -85,13 +92,31 @@ impl SolveResult {
         let oop_ev = solver.compute_ev(crate::game::OOP);
         let ip_ev = solver.compute_ev(crate::game::IP);
 
-        let oop_range_weights = &solver.config.ranges[0].weights;
-        let ip_range_weights = &solver.config.ranges[1].weights;
+        // Shared bucket cache: key = (combo_idx, board bitmask). Since all nodes on
+        // the primary street share the same board, this avoids recomputing buckets.
+        let mut bucket_cache: HashMap<(u16, u64), u8> = HashMap::new();
 
         // Extract root node strategy
         let mut strategies = Vec::new();
         if let Some(combos) = solver.get_strategy(&[]) {
-            let node_strat = build_node_strategy("root", "OOP", &combos, Some(&oop_ev), Some(oop_range_weights));
+            let street_str = match solver.config.street {
+                crate::game::Street::Preflop => "preflop",
+                crate::game::Street::Flop => "flop",
+                crate::game::Street::Turn => "turn",
+                crate::game::Street::River => "river",
+            };
+            let ranges = solver.extract_ranges_after_line(&[])
+                .unwrap_or_else(|| [solver.config.ranges[0].clone(), solver.config.ranges[1].clone()]);
+            let node_strat = build_node_strategy(
+                "root",
+                "OOP",
+                street_str,
+                &combos,
+                Some(&oop_ev),
+                Some(&ranges[0].weights),
+                Some(solver.config.board),
+                &mut bucket_cache,
+            );
             strategies.push(node_strat);
         }
 
@@ -105,17 +130,43 @@ impl SolveResult {
                     .map(|a| format!("{}", a))
                     .collect::<Vec<_>>()
                     .join(" → ");
-                let (player, ev_ref) = match solver.get_player(action_seq) {
-                    Some(crate::game::OOP) => ("OOP", &oop_ev),
-                    Some(crate::game::IP) => ("IP", &ip_ev),
+                
+                // Determine which street this node belongs to
+                let street = solver.get_node_street(action_seq).unwrap_or(solver.config.street);
+                let street_str = match street {
+                    crate::game::Street::Preflop => "preflop",
+                    crate::game::Street::Flop => "flop",
+                    crate::game::Street::Turn => "turn",
+                    crate::game::Street::River => "river",
+                };
+                
+                let (player, player_idx, ev_ref) = match solver.get_player(action_seq) {
+                    Some(crate::game::OOP) => ("OOP", 0usize, &oop_ev),
+                    Some(crate::game::IP) => ("IP", 1usize, &ip_ev),
                     _ => if action_seq.len() % 2 == 0 {
-                        ("OOP", &oop_ev)
+                        ("OOP", 0usize, &oop_ev)
                     } else {
-                        ("IP", &ip_ev)
+                        ("IP", 1usize, &ip_ev)
                     },
                 };
-                let range_weights = if player == "OOP" { oop_range_weights } else { ip_range_weights };
-                let node_strat = build_node_strategy(&node_desc, player, &combos, Some(ev_ref), Some(range_weights));
+                let ranges = solver.extract_ranges_after_line(action_seq)
+                    .unwrap_or_else(|| [solver.config.ranges[0].clone(), solver.config.ranges[1].clone()]);
+                // Only compute buckets for nodes on the solve's primary street.
+                let bucket_board = if street == solver.config.street {
+                    Some(solver.config.board)
+                } else {
+                    None
+                };
+                let node_strat = build_node_strategy(
+                    &node_desc,
+                    player,
+                    street_str,
+                    &combos,
+                    Some(ev_ref),
+                    Some(&ranges[player_idx].weights),
+                    bucket_board,
+                    &mut bucket_cache,
+                );
                 strategies.push(node_strat);
             }
         }
@@ -139,13 +190,29 @@ impl SolveResult {
         // If strategy is empty but we have iterations, force strategy computation
         if result.strategy.is_empty() && solver.config.iterations > 0 {
             let mut strategies = Vec::new();
-            
+            let mut bucket_cache: HashMap<(u16, u64), u8> = HashMap::new();
+
             // Force computation of root strategy
             if let Some(combos) = solver.get_strategy(&[]) {
-                let node_strat = build_node_strategy("root", "OOP", &combos, None, None);
+                let street_str = match solver.config.street {
+                    crate::game::Street::Preflop => "preflop",
+                    crate::game::Street::Flop => "flop",
+                    crate::game::Street::Turn => "turn",
+                    crate::game::Street::River => "river",
+                };
+                let node_strat = build_node_strategy(
+                    "root",
+                    "OOP",
+                    street_str,
+                    &combos,
+                    None,
+                    None,
+                    Some(solver.config.board),
+                    &mut bucket_cache,
+                );
                 strategies.push(node_strat);
             }
-            
+
             // Force computation for all decision nodes
             for action_seq in solver.iter_decision_nodes() {
                 if action_seq.is_empty() {
@@ -156,8 +223,32 @@ impl SolveResult {
                         .map(|a| format!("{}", a))
                         .collect::<Vec<_>>()
                         .join(" → ");
+                    
+                    // Determine which street this node belongs to
+                    let street = solver.get_node_street(action_seq).unwrap_or(solver.config.street);
+                    let street_str = match street {
+                        crate::game::Street::Preflop => "preflop",
+                        crate::game::Street::Flop => "flop",
+                        crate::game::Street::Turn => "turn",
+                        crate::game::Street::River => "river",
+                    };
+                    
                     let player = if action_seq.len() % 2 == 0 { "OOP" } else { "IP" };
-                    let node_strat = build_node_strategy(&node_desc, player, &combos, None, None);
+                    let bucket_board = if street == solver.config.street {
+                        Some(solver.config.board)
+                    } else {
+                        None
+                    };
+                    let node_strat = build_node_strategy(
+                        &node_desc,
+                        player,
+                        street_str,
+                        &combos,
+                        None,
+                        None,
+                        bucket_board,
+                        &mut bucket_cache,
+                    );
                     strategies.push(node_strat);
                 }
             }
@@ -398,9 +489,12 @@ if (DATA.strategy.length > 0) renderNode(firstIdx);
 fn build_node_strategy(
     node: &str,
     player: &str,
+    street: &str,
     combos: &[(u16, Vec<(Action, f32)>)],
     ev_array: Option<&[f32; 1326]>,
     range_weights: Option<&[f32; 1326]>,
+    bucket_board: Option<Hand>,
+    bucket_cache: &mut HashMap<(u16, u64), u8>,
 ) -> NodeStrategy {
     let mut combo_strategies = Vec::new();
 
@@ -428,12 +522,20 @@ fn build_node_strategy(
         let ev = ev_array.map_or(0.0, |evs| evs[idx as usize]);
         let range_weight = range_weights.map_or(1.0, |rw| rw[idx as usize]);
 
-        if !actions.is_empty() {
+        let bucket = bucket_board.and_then(|board| {
+            let key = (idx, board.0);
+            Some(*bucket_cache.entry(key).or_insert_with(|| {
+                hand_bucket(Hand::from_card(c1).add(c2), board)
+            }))
+        });
+
+        if range_weight > 1e-6 && !actions.is_empty() {
             combo_strategies.push(ComboStrategy {
                 hand,
                 actions,
                 ev,
                 range_weight,
+                bucket,
             });
         }
     }
@@ -441,6 +543,7 @@ fn build_node_strategy(
     NodeStrategy {
         node: node.to_string(),
         player: player.to_string(),
+        street: street.to_string(),
         combos: combo_strategies,
     }
 }

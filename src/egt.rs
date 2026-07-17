@@ -259,7 +259,7 @@ fn gradient_traverse(
         TreeNode::DepthLimitedLeaf { .. } => {
             for v in out[..live_count].iter_mut() { *v = 0.0; }
         }
-        TreeNode::Chance { children, iso_perms, n_actual } => {
+        TreeNode::Chance { children, iso_perms, n_actual, .. } => {
             if children.is_empty() {
                 for v in out[..live_count].iter_mut() { *v = 0.0; }
                 return;

@@ -102,7 +102,7 @@ fn test_river_solver_convergence() {
         bet_config: None,
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let mut solver = SubgameSolver::new(config);
@@ -240,7 +240,7 @@ fn test_solver_polarized_vs_bluffcatcher() {
         bet_config: None,
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let mut solver = SubgameSolver::new(config);
@@ -286,7 +286,7 @@ fn test_river_gto_polarized() {
         bet_config: None,
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let mut solver = SubgameSolver::new(config);
@@ -404,7 +404,7 @@ fn test_river_wide_range_performance() {
         bet_config: None,
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let mut solver = SubgameSolver::new(config);
@@ -450,7 +450,7 @@ fn test_river_full_range_stress() {
         bet_config: None,
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let mut solver = SubgameSolver::new(config);
@@ -493,7 +493,7 @@ fn test_turn_river_solve() {
         bet_config: None,
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let mut solver = SubgameSolver::new(config);
@@ -536,7 +536,7 @@ fn test_exploitability_decreases_with_iterations() {
         bet_config: None,
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
     let mut solver_50 = SubgameSolver::new(config_50);
     solver_50.solve();
@@ -554,7 +554,7 @@ fn test_exploitability_decreases_with_iterations() {
         bet_config: None,
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
     let mut solver_500 = SubgameSolver::new(config_500);
     solver_500.solve();
@@ -594,7 +594,7 @@ fn test_exploitability_nuts_vs_air() {
         bet_config: None,
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let mut solver = SubgameSolver::new(config);
@@ -652,7 +652,7 @@ fn test_export_json() {
         bet_config: None,
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let mut solver = SubgameSolver::new(config);
@@ -698,7 +698,7 @@ fn test_gto_exploitability_under_1pct() {
         bet_config: None,
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let mut solver = SubgameSolver::new(config);
@@ -740,7 +740,7 @@ fn test_gto_zero_sum_ev() {
         bet_config: None,
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let mut solver = SubgameSolver::new(config);
@@ -805,7 +805,7 @@ fn test_gto_nuts_ev_equals_pot() {
         bet_config: None,
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let mut solver = SubgameSolver::new(config);
@@ -887,7 +887,7 @@ fn test_gto_pot_bet_bluff_ratio() {
         bet_config: Some(Arc::new(bet_config)),
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let mut solver = SubgameSolver::new(config);
@@ -1038,7 +1038,7 @@ fn test_gto_third_pot_bet_frequencies() {
         bet_config: Some(Arc::new(bet_config)),
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let mut solver = SubgameSolver::new(config);
@@ -1159,7 +1159,7 @@ fn test_gto_bet_size_monotonicity() {
             bet_config: Some(Arc::new(bet_config)),
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
 
         let mut solver = SubgameSolver::new(config);
@@ -1263,7 +1263,7 @@ fn test_deep_stack_exploitability() {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -1340,7 +1340,7 @@ fn test_wide_range_realistic() {
         bet_config: None,
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let mut solver = SubgameSolver::new(config);
@@ -1430,7 +1430,7 @@ fn test_wide_range_deep_stack() {
         bet_config: None,
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let mut solver = SubgameSolver::new(config);
@@ -1514,7 +1514,7 @@ fn test_wide_range_convergence_curve() {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let start = std::time::Instant::now();
         let mut solver = SubgameSolver::new(config);
@@ -1537,7 +1537,7 @@ fn test_wide_range_convergence_curve() {
             bet_config: None,
             dcfr: false,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let start = std::time::Instant::now();
         let mut solver = SubgameSolver::new(config);
@@ -1607,7 +1607,7 @@ fn test_narrow_vs_wide_range_floor() {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let start = std::time::Instant::now();
         let mut solver = SubgameSolver::new(config);
@@ -1676,7 +1676,7 @@ fn test_gtoplus_validation_river() {
         bet_config: None,
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
     let start = std::time::Instant::now();
     let mut solver = SubgameSolver::new(config);
@@ -1710,7 +1710,7 @@ fn test_gtoplus_validation_river() {
         bet_config: Some(Arc::new(bet_config)),
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
     let start = std::time::Instant::now();
     let mut solver2 = SubgameSolver::new(config2);
@@ -1768,7 +1768,7 @@ fn test_convergence_analysis() {
             bet_config: Some(Arc::new(bet_config.clone())),
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
 
         let mut solver = SubgameSolver::new(config);
@@ -1790,7 +1790,7 @@ fn test_convergence_analysis() {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
 
         let mut solver = SubgameSolver::new(config);
@@ -1826,7 +1826,7 @@ fn test_exploitability_vs_stack_depth() {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
 
         let mut solver = SubgameSolver::new(config);
@@ -1869,7 +1869,7 @@ fn test_dcfr_vs_vanilla_cfr_plus() {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver_dcfr = SubgameSolver::new(config_dcfr);
         solver_dcfr.solve();
@@ -1888,7 +1888,7 @@ fn test_dcfr_vs_vanilla_cfr_plus() {
             bet_config: None,
             dcfr: false,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver_vanilla = SubgameSolver::new(config_vanilla);
         solver_vanilla.solve();
@@ -1991,7 +1991,7 @@ fn test_bet_config_isolation() {
             bet_config: Some(Arc::new(bc.clone())),
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -2034,7 +2034,7 @@ fn test_pot_bet_strategy_dump() {
         bet_config: Some(Arc::new(pot_config)),
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let mut solver = SubgameSolver::new(config);
@@ -2162,7 +2162,7 @@ fn test_minimal_tree_deep_stacks() {
             bet_config: Some(Arc::new(empty_config.clone())),
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver_empty = SubgameSolver::new(config_empty);
         solver_empty.solve();
@@ -2181,7 +2181,7 @@ fn test_minimal_tree_deep_stacks() {
             bet_config: Some(Arc::new(single_config.clone())),
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver_single = SubgameSolver::new(config_single);
         solver_single.solve();
@@ -2200,7 +2200,7 @@ fn test_minimal_tree_deep_stacks() {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver_default = SubgameSolver::new(config_default);
         solver_default.solve();
@@ -2368,6 +2368,7 @@ fn bb_turn_range_from_flop_call(data: &str) -> Range {
     range
 }
 
+#[cfg(feature = "download-data")]
 #[test]
 #[ignore]
 fn test_turn_river_vs_gtoplus() {
@@ -2470,7 +2471,7 @@ fn test_turn_river_vs_gtoplus() {
         bet_config: Some(Arc::new(bet_config)),
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     println!("\n--- Solving turn+river ({} iterations) ---", iterations);
@@ -2732,7 +2733,7 @@ fn solve_and_compare_gtoplus(
         bet_config: Some(Arc::new(bet_config)),
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let start = std::time::Instant::now();
@@ -2819,6 +2820,7 @@ fn solve_and_compare_gtoplus(
 
 /// Precision test: try multiple tree configurations, report best match.
 /// Runs high iterations to separate tree effects from convergence effects.
+#[cfg(feature = "download-data")]
 #[test]
 #[ignore]
 fn test_precision_gtoplus_match() {
@@ -2970,6 +2972,7 @@ fn test_precision_gtoplus_match() {
 }
 
 /// Test: DCFR vs plain CFR+ convergence to investigate exploitability floor.
+#[cfg(feature = "download-data")]
 #[test]
 #[ignore]
 fn test_dcfr_vs_plain_cfr_convergence() {
@@ -3010,7 +3013,7 @@ fn test_dcfr_vs_plain_cfr_convergence() {
         bet_config: Some(bet_config.clone()),
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
     let start = std::time::Instant::now();
     let mut solver_dcfr = SubgameSolver::new(config_dcfr);
@@ -3030,7 +3033,7 @@ fn test_dcfr_vs_plain_cfr_convergence() {
         bet_config: Some(bet_config.clone()),
         dcfr: false,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
     let start = std::time::Instant::now();
     let mut solver_plain = SubgameSolver::new(config_plain);
@@ -3101,7 +3104,7 @@ fn test_flop_solve_minimal() {
         bet_config: Some(Arc::new(bet_config)),
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let start = Instant::now();
@@ -3198,7 +3201,7 @@ fn test_deep_convergence_river() {
         bet_config: Some(Arc::new(bet_config)),
         dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let start = Instant::now();
@@ -3226,6 +3229,7 @@ fn test_deep_convergence_river() {
 
 /// Deep convergence test: turn+river with GTO+ matching.
 /// Runs 50K iterations and compares with GTO+ data.
+#[cfg(feature = "download-data")]
 #[test]
 #[ignore]
 fn test_deep_convergence_turn_river() {
@@ -3292,7 +3296,7 @@ fn test_deep_convergence_turn_river() {
         bet_config: Some(Arc::new(bet_config)),
         dcfr: true,
         cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let start = Instant::now();
@@ -3601,6 +3605,7 @@ fn test_deep_convergence_turn_river() {
 }
 
 /// Test different allin thresholds to find which matches GTO+ best.
+#[cfg(feature = "download-data")]
 #[test]
 #[ignore]
 fn test_allin_threshold_comparison() {
@@ -3675,7 +3680,7 @@ fn test_allin_threshold_comparison() {
             bet_config: Some(Arc::new(bet_config)),
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
 
         let mut solver = SubgameSolver::new(config);
@@ -3743,6 +3748,7 @@ fn test_allin_threshold_comparison() {
 }
 
 /// Diagnostic test: verify constant-sum and exploitability breakdown for river vs turn+river.
+#[cfg(feature = "download-data")]
 #[test]
 #[ignore]
 fn test_exploitability_diagnostic() {
@@ -3785,7 +3791,7 @@ fn test_exploitability_diagnostic() {
             bet_config: Some(bet_config.clone()),
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -3809,7 +3815,7 @@ fn test_exploitability_diagnostic() {
             bet_config: Some(bet_config.clone()),
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver = SubgameSolver::new(config);
         // Only 1 iteration to build tree and get minimal cum_strategy
@@ -3834,7 +3840,7 @@ fn test_exploitability_diagnostic() {
             bet_config: Some(bet_config.clone()),
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -3845,6 +3851,7 @@ fn test_exploitability_diagnostic() {
 
 /// Compare CFR variants on turn+river to diagnose 1.44% convergence stall.
 /// Tests: (1) CFR+ + DCFR, (2) CFR+ only, (3) Vanilla CFR only.
+#[cfg(feature = "download-data")]
 #[test]
 #[ignore]
 fn test_cfr_variant_comparison() {
@@ -3906,7 +3913,7 @@ fn test_cfr_variant_comparison() {
             cfr_plus: *cfr_plus,
             skip_cum_strategy: false,
             dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
 
         let start = Instant::now();
@@ -4414,7 +4421,7 @@ fn test_flop_turn_river_solve() {
         bet_config: Some(Arc::new(flop_test_bet_config())),
         dcfr: true,
         cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let start = std::time::Instant::now();
@@ -4474,7 +4481,7 @@ fn test_flop_solve_convergence() {
         bet_config: Some(Arc::new(flop_test_bet_config())),
         dcfr: true,
         cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let start = std::time::Instant::now();
@@ -4558,7 +4565,7 @@ fn test_flop_solve_default_config() {
         bet_config: None,  // full default bet config
         dcfr: true,
         cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let start = std::time::Instant::now();
@@ -4620,7 +4627,7 @@ fn test_flop_full_range() {
         bet_config: Some(Arc::new(flop_test_bet_config())),
         dcfr: true,
         cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let start = std::time::Instant::now();
@@ -4697,7 +4704,7 @@ fn test_flop_full_range_5000iter() {
         bet_config: Some(Arc::new(flop_test_bet_config())),
         dcfr: true,
         cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let start = std::time::Instant::now();
@@ -4766,7 +4773,7 @@ fn test_flop_convergence_curve() {
         bet_config: Some(Arc::new(flop_test_bet_config())),
         dcfr: true,
         cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let start = std::time::Instant::now();
@@ -4789,6 +4796,7 @@ fn test_flop_convergence_curve() {
 
 /// GTO+ River Comparison: AsKs3d 7c 2h, after double-barrel 125% pot.
 /// BTN: Bet All-in (66.56bb) / Check. BB: Call / Fold.
+#[cfg(feature = "download-data")]
 #[test]
 #[ignore]
 fn test_river_vs_gtoplus_allin() {
@@ -4879,7 +4887,7 @@ fn test_river_vs_gtoplus_allin() {
         bet_config: Some(Arc::new(bet_config)),
         dcfr: true,
         cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let start = Instant::now();
@@ -5146,7 +5154,7 @@ fn test_iso_two_tone_turn_solve() {
         bet_config: None,
         dcfr: true,
         cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let mut solver = SubgameSolver::new(config);
@@ -5188,7 +5196,7 @@ fn test_iso_rainbow_turn_solve() {
         bet_config: None,
         dcfr: true,
         cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let mut solver = SubgameSolver::new(config);
@@ -5240,7 +5248,7 @@ fn test_iso_two_tone_flop_solve() {
         bet_config: Some(Arc::new(bet_config)),
         dcfr: true,
         cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
 
     let start = std::time::Instant::now();
@@ -5354,6 +5362,8 @@ fn make_flop_config(board: Hand, iterations: u32, use_iso: bool) -> SubgameConfi
         dcfr: true,
         cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
         depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0,
+        early_stop_pct: 0.0, early_stop_patience: 2,
+        par_decision_depth: u32::MAX,
     }
 }
 
@@ -5861,7 +5871,7 @@ fn test_iso_on_off_exploitability_differential() {
                 cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
                 depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0,
                 entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0,
-                use_iso: *use_iso, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+                use_iso: *use_iso, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
             };
             let mut solver = SubgameSolver::new(config);
             solver.solve();
@@ -5910,7 +5920,7 @@ fn test_iso_single_iteration_utility_differential() {
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
             depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0,
             entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0,
-            use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver_on = SubgameSolver::new(config_on);
         solver_on.solve();
@@ -5925,7 +5935,7 @@ fn test_iso_single_iteration_utility_differential() {
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
             depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0,
             entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0,
-            use_iso: false, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            use_iso: false, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver_off = SubgameSolver::new(config_off);
         solver_off.solve();
@@ -5998,7 +6008,7 @@ fn test_iso_per_combo_ev_symmetry() {
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
             depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0,
             entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0,
-            use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -6015,7 +6025,7 @@ fn test_iso_per_combo_ev_symmetry() {
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
             depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0,
             entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0,
-            use_iso: false, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            use_iso: false, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver_off = SubgameSolver::new(config_off);
         solver_off.solve();
@@ -6144,7 +6154,7 @@ fn test_iso_flop_ev_symmetry_narrow() {
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
             depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0,
             entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0,
-            use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver_on = SubgameSolver::new(config_on);
         solver_on.solve();
@@ -6160,7 +6170,7 @@ fn test_iso_flop_ev_symmetry_narrow() {
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
             depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0,
             entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0,
-            use_iso: false, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            use_iso: false, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver_off = SubgameSolver::new(config_off);
         solver_off.solve();
@@ -6264,7 +6274,7 @@ fn test_regression_iso_paired_monotone_convergence() {
             depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0,
             entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false,
             opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0,
-            use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -6313,7 +6323,7 @@ fn test_regression_iso_on_off_ratio() {
                 depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0,
                 entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false,
                 opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0,
-                use_iso: *use_iso, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+                use_iso: *use_iso, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
             };
             let mut solver = SubgameSolver::new(config);
             solver.solve();
@@ -6365,7 +6375,7 @@ fn test_regression_standard_dcfr_representative_boards() {
             depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0,
             entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false,
             opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0,
-            use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -6424,7 +6434,7 @@ fn test_regression_frozen_root_high_exploitability() {
         rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0,
         entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false,
         opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0,
-        use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+        use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
     let mut baseline = SubgameSolver::new(baseline_config.clone());
     baseline.solve();
@@ -6454,7 +6464,7 @@ fn test_regression_frozen_root_high_exploitability() {
         opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0,
         use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false,
         frozen_root: Some(frozen), check_bias: 0.0,
-        pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+        pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
     };
     let mut frozen_solver = SubgameSolver::new(frozen_config);
     frozen_solver.solve();
@@ -6475,5 +6485,94 @@ fn test_regression_frozen_root_high_exploitability() {
     assert!(expl_frozen > expl_baseline * 10.0,
         "Frozen root should be >10x worse than baseline: {:.4}% vs {:.4}%",
         expl_frozen, expl_baseline);
+}
+
+// ===========================================================================
+// Test: Early stop hardening
+// ===========================================================================
+
+#[test]
+fn test_early_stop_disabled_runs_full() {
+    let board = Hand::new()
+        .add(card(12, 2)) // Ah
+        .add(card(11, 3)) // Ks
+        .add(card(10, 1)) // Qd
+        .add(card(3, 0))  // 5c
+        .add(card(0, 3)); // 2s
+
+    let config = SubgameConfig {
+        board,
+        pot: 100,
+        stacks: [100, 100],
+        ranges: [Range::parse("AA,KK,QQ").unwrap(), Range::parse("TT,99,88").unwrap()],
+        iterations: 10,
+        street: Street::River,
+        warmup_frac: 0.0,
+        bet_config: None,
+        dcfr: true,
+            cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
+    };
+    let mut solver = SubgameSolver::new(config);
+    solver.solve_with_report_interval(1, |_, _| {});
+    assert_eq!(solver.iteration, 10, "Disabled early stop should run all iterations");
+}
+
+#[test]
+fn test_early_stop_patient_stops_after_streak() {
+    let board = Hand::new()
+        .add(card(12, 2)) // Ah
+        .add(card(11, 3)) // Ks
+        .add(card(10, 1)) // Qd
+        .add(card(3, 0))  // 5c
+        .add(card(0, 3)); // 2s
+
+    let config = SubgameConfig {
+        board,
+        pot: 100,
+        stacks: [100, 100],
+        ranges: [Range::parse("AA,KK,QQ").unwrap(), Range::parse("TT,99,88").unwrap()],
+        iterations: 10,
+        street: Street::River,
+        warmup_frac: 0.0,
+        bet_config: None,
+        dcfr: true,
+            cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 1000.0, early_stop_patience: 3, par_decision_depth: u32::MAX,
+    };
+    let mut solver = SubgameSolver::new(config);
+    solver.solve_with_report_interval(1, |_, _| {});
+    assert_eq!(solver.iteration, 3, "Should stop after 3 consecutive below-threshold reports");
+}
+
+#[test]
+fn test_cached_exploitability_available_in_callback() {
+    let board = Hand::new()
+        .add(card(12, 2)) // Ah
+        .add(card(11, 3)) // Ks
+        .add(card(10, 1)) // Qd
+        .add(card(3, 0))  // 5c
+        .add(card(0, 3)); // 2s
+
+    let config = SubgameConfig {
+        board,
+        pot: 100,
+        stacks: [100, 100],
+        ranges: [Range::parse("AA,KK,QQ").unwrap(), Range::parse("TT,99,88").unwrap()],
+        iterations: 2,
+        street: Street::River,
+        warmup_frac: 0.0,
+        bet_config: None,
+        dcfr: true,
+            cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
+    };
+    let mut solver = SubgameSolver::new(config);
+    let mut seen = false;
+    solver.solve_with_report_interval(1, |_, s| {
+        assert!(s.last_exploitability_pct.is_some(), "last_exploitability_pct should be set in callback");
+        seen = true;
+    });
+    assert!(seen, "Callback should have fired at least once");
 }
 

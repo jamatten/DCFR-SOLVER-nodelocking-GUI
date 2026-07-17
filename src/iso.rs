@@ -225,6 +225,9 @@ pub struct CanonicalCard {
     pub card: Card,
     /// Combo permutation tables for each isomorphic card (identity NOT included).
     pub perms: Vec<[u16; NUM_COMBOS]>,
+    /// The actual isomorphic card represented by each permutation in `perms`.
+    /// `partner_cards[i]` is the real card whose combos are mapped by `perms[i]`.
+    pub partner_cards: Vec<u8>,
 }
 
 /// Compute canonical next cards for dealing from a board.
@@ -240,7 +243,7 @@ pub fn canonical_next_cards(board: Hand) -> Vec<CanonicalCard> {
         let mut result = Vec::new();
         for c in 0..52u8 {
             if board.contains(c) { continue; }
-            result.push(CanonicalCard { card: c, perms: Vec::new() });
+            result.push(CanonicalCard { card: c, perms: Vec::new(), partner_cards: Vec::new() });
         }
         return result;
     }
@@ -255,16 +258,18 @@ pub fn canonical_next_cards(board: Hand) -> Vec<CanonicalCard> {
         assigned[c as usize] = true;
 
         let mut perms = Vec::new();
+        let mut partner_cards = Vec::new();
         for sp in &suit_perms {
             let mapped = rank(c) * 4 + sp[suit(c) as usize];
             if mapped != c && !board.contains(mapped) && !assigned[mapped as usize] {
                 assigned[mapped as usize] = true;
                 // The combo permutation maps canonical card's combos → this isomorphic card's combos
                 perms.push(combo_permutation(sp));
+                partner_cards.push(mapped);
             }
         }
 
-        result.push(CanonicalCard { card: c, perms });
+        result.push(CanonicalCard { card: c, perms, partner_cards });
     }
 
     result

@@ -533,7 +533,8 @@ pub struct SubgameConfig {
     /// Unlike check_bias, this preserves regret accumulation and NE convergence (Preference-CFR, 2024).
     pub pref_passive_delta: f32,
     /// Root check reward: pot-relative epsilon for passive NE selection.
-    /// Adds `pref_beta * pot` to check action's counterfactual value at root only.
+    /// Adds `(pref_beta / 100) * pot` to check action's counterfactual value at root only.
+    /// `pref_beta` is expressed as a percentage of the pot (e.g. 7.0 = 7% of pot).
     /// Indifferent hands prefer check → passive NE (closer to GTO+/Pio).
     /// 0.0 = disabled (default). Try 7.0-8.0 for GTO+ matching.
     pub pref_beta: f32,
@@ -559,6 +560,10 @@ pub struct SubgameConfig {
     /// Stop iterating early if exploitability (% of pot) falls at or below this threshold.
     /// 0.0 = disabled (run all `iterations`). E.g. 0.3 = stop when expl ≤ 0.3% pot.
     pub early_stop_pct: f32,
+    /// Number of consecutive report checks that must satisfy `early_stop_pct`
+    /// before actually stopping. Exploitability of the average strategy is not
+    /// strictly monotonic, so a value > 1 helps avoid false positives from transient dips.
+    pub early_stop_patience: u32,
     /// Parallel decision-node depth cutoff for action fan-out.
     /// Decision nodes at `decision_depth < par_decision_depth` parallelize their
     /// action-children via Rayon; deeper nodes fall back to sequential traversal
@@ -589,6 +594,9 @@ pub enum TreeNode {
         /// For each child, the combo permutations for its isomorphic cards.
         /// iso_perms[i] is empty when the card has no isomorphic partners.
         iso_perms: Vec<Vec<[u16; NUM_COMBOS]>>,
+        /// For each child, the actual card represented by each permutation in iso_perms[i].
+        /// iso_cards[i][p] is the real card whose combos are mapped by iso_perms[i][p].
+        iso_cards: Vec<Vec<u8>>,
         /// Actual number of available cards (for normalization).
         n_actual: u8,
     },
@@ -720,44 +728,9 @@ impl CfrData {
     fn average_strategy(&self, combo: usize, arena: &[ArenaInt], expl_eps: f32, softmax_temp: f32) -> Vec<f32> {
         let n = self.n_actions;
         let mut strat = vec![0.0f32; n];
-        
-        // When cum_strategy exists, use it directly
-        if let Some(ref cum) = self.cum_strategy {
-            let mut total = 0.0f32;
-            for a in 0..n {
-                strat[a] = cum[combo * n + a];
-                total += strat[a];
-            }
-            if total > 0.0 {
-                for s in &mut strat { *s /= total; }
-            } else {
-            strat.fill(1.0 / n as f32);
-            }
-        } 
-        
-        // When no cum_strategy, compute from current regrets
-        else {
-            let lc = self.live_count;
-            let scale = self.regret_scale.get();
-            let mut pos_sum = 0.0f32;
-            
-            for a in 0..n {
-                let r = (arena[self.regret_offset + a * lc + combo] as f32 * scale).max(0.0);
-                strat[a] = r;
-                pos_sum += r;
-            }
-            
-            if pos_sum > 0.0 {
-                let inv = 1.0 / pos_sum;
-                for s in &mut strat { *s *= inv; }
-            } else {
-                strat.fill(1.0 / n as f32);
-            }
-        }
-        
-        // Apply softmax if needed
+
         if softmax_temp > 0.0 {
-            // QRE mode: softmax of cumulative regrets
+            // QRE mode: softmax of current regrets
             let regrets = &arena[self.regret_offset..self.regret_offset + self.regret_len()];
             let scale = self.regret_scale.get();
             let lc = self.live_count;
@@ -774,10 +747,27 @@ impl CfrData {
                 strat[a] = e;
                 sum_exp += e;
             }
-            let inv = 1.0 / sum_exp;
-            for s in &mut strat { *s *= inv; }
+            if sum_exp > 0.0 {
+                let inv = 1.0 / sum_exp;
+                for s in &mut strat { *s *= inv; }
+            } else {
+                strat.fill(1.0 / n as f32);
+            }
+        } else if let Some(ref cum) = self.cum_strategy {
+            // Cumulative average strategy
+            let mut total = 0.0f32;
+            for a in 0..n {
+                strat[a] = cum[combo * n + a];
+                total += strat[a];
+            }
+            if total > 0.0 {
+                let inv = 1.0 / total;
+                for s in &mut strat { *s *= inv; }
+            } else {
+                strat.fill(1.0 / n as f32);
+            }
         } else {
-            // Fallback: regret-matched strategy from current i16 regrets (SoA layout).
+            // Regret-matched strategy from current i16 regrets (SoA layout)
             let regrets = &arena[self.regret_offset..self.regret_offset + self.regret_len()];
             let scale = self.regret_scale.get();
             let lc = self.live_count;
@@ -794,6 +784,7 @@ impl CfrData {
                 strat.fill(1.0 / n as f32);
             }
         }
+
         // Apply exploration epsilon to output
         if expl_eps > 0.0 {
             let one_m = 1.0 - expl_eps;
@@ -875,12 +866,39 @@ pub struct SubgameSolver {
     /// Precomputed showdown data per board.
     pub(crate) sd_cache: ShowdownCache,
     pub(crate) root_id: u32,
-    pub(crate) iteration: u32,
+    /// Current iteration number (0 before solving starts).
+    pub iteration: u32,
+    /// Exploitability (% of pot) computed at the most recent report callback.
+    /// `None` before any report has fired. Callers inside the callback can read
+    /// this instead of recomputing `exploitability_pct()`.
+    pub last_exploitability_pct: Option<f32>,
+    /// Number of consecutive report checks that were below `early_stop_pct`.
+    pub(crate) consecutive_below_threshold: u32,
     /// Maps between original 1326 combo indices and compact live indices.
     pub(crate) combo_map: ComboMap,
     /// Neural network for depth-limited solving (keeps Arc alive for raw ptrs in tree).
     #[cfg(feature = "nn")]
     valuenet: Option<Arc<crate::valuenet::ValueNet>>,
+}
+
+/// Strategy and EV for a specific river card under a turn line.
+/// Walks the turn tree, finds the canonical river subtree for `river_card`,
+/// and maps the canonical strategy back to the actual combos using the
+/// isomorphic permutation.  `range_weight` is the reach at the turn line
+/// with the river card removed.
+#[derive(Debug, Clone)]
+pub struct RiverComboInfo {
+    pub orig_idx: u16,
+    pub action_probs: Vec<(Action, f32)>,
+    pub ev: f32,
+    pub range_weight: f32,
+}
+
+#[derive(Debug, Clone)]
+pub struct RiverStrategyInfo {
+    pub player: Player,
+    pub actions: Vec<Action>,
+    pub combos: Vec<RiverComboInfo>,
 }
 
 impl SubgameSolver {
@@ -897,6 +915,8 @@ impl SubgameSolver {
             sd_cache: ShowdownCache::new(),
             root_id: 0,
             iteration: 0,
+            last_exploitability_pct: None,
+            consecutive_below_threshold: 0,
             combo_map,
             #[cfg(feature = "nn")]
             valuenet: None,
@@ -1088,6 +1108,10 @@ impl SubgameSolver {
         let total = self.config.iterations;
         let mut next_report = if every > 0 { every } else { 1u32 };
 
+        // Reset per-solve early-stop state.
+        self.last_exploitability_pct = None;
+        self.consecutive_below_threshold = 0;
+
         // Phase 2: CFR+ iterations
         let arena_ptr = self.arena.as_ptr();
         for _ in 0..total {
@@ -1199,15 +1223,27 @@ impl SubgameSolver {
             }
 
             if self.iteration >= next_report || self.iteration == total {
+                // Compute exploitability once per report and cache it. Callers can read
+                // `last_exploitability_pct` inside the callback to avoid recomputing it.
+                let expl = self.exploitability_pct();
+                self.last_exploitability_pct = Some(expl);
+
                 callback(self.iteration, self);
-                // Early-stop: if threshold is set and exploitability is met, stop iterating.
-                // exploitability_pct() is already called inside the callback in the GUI,
-                // so this adds at most one extra call per report interval (not per iteration).
-                if self.config.early_stop_pct > 0.0
-                    && self.exploitability_pct() <= self.config.early_stop_pct
-                {
-                    break;
+
+                // Early-stop: require `early_stop_patience` consecutive report checks
+                // below `early_stop_pct`. Average-strategy exploitability is not strictly
+                // monotonic, so a single dip can be a transient false positive.
+                if self.config.early_stop_pct > 0.0 {
+                    if expl <= self.config.early_stop_pct {
+                        self.consecutive_below_threshold += 1;
+                    } else {
+                        self.consecutive_below_threshold = 0;
+                    }
+                    if self.consecutive_below_threshold >= self.config.early_stop_patience {
+                        break;
+                    }
                 }
+
                 if every > 0 {
                     next_report += every;
                 } else {
@@ -1337,6 +1373,7 @@ impl SubgameSolver {
 
                 let mut children = Vec::new();
                 let mut iso_perms = Vec::new();
+                let mut iso_cards = Vec::new();
                 if self.config.use_iso {
                     let canonical = canonical_next_cards(dead);
                     for cc in &canonical {
@@ -1344,6 +1381,7 @@ impl SubgameSolver {
                         let child_id = self.build_tree(&next, action_seq, decision_depth);
                         children.push((cc.card, child_id));
                         iso_perms.push(cc.perms.clone());
+                        iso_cards.push(cc.partner_cards.clone());
                     }
                 } else {
                     // No ISO: enumerate all available cards individually
@@ -1353,10 +1391,11 @@ impl SubgameSolver {
                         let child_id = self.build_tree(&next, action_seq, decision_depth);
                         children.push((card, child_id));
                         iso_perms.push(Vec::new()); // no perms
+                        iso_cards.push(Vec::new()); // no perms
                     }
                 }
                 let id = self.tree.len() as u32;
-                self.tree.push(TreeNode::Chance { children, iso_perms, n_actual });
+                self.tree.push(TreeNode::Chance { children, iso_perms, iso_cards, n_actual });
                 id
             }
             NodeType::Decision(player) => {
@@ -1466,6 +1505,37 @@ impl SubgameSolver {
     /// Iterate all decision node action sequences (for export).
     pub fn iter_decision_nodes(&self) -> impl Iterator<Item = &Vec<Action>> {
         self.node_index.keys()
+    }
+
+    /// Determine which street a decision node belongs to by counting street transitions.
+    /// Returns the street for the node identified by `action_seq`.
+    pub fn get_node_street(&self, action_seq: &[Action]) -> Option<Street> {
+        if self.tree.is_empty() {
+            return None;
+        }
+
+        let mut current_street = self.config.street;
+        let mut current_id = self.root_id;
+
+        for &action in action_seq {
+            // Find the child for this action
+            match &self.tree[current_id as usize] {
+                TreeNode::Decision { actions: node_acts, children: node_ch, .. } => {
+                    let act_idx = node_acts.iter().position(|a| a == &action)?;
+                    current_id = node_ch[act_idx];
+                }
+                _ => return None,
+            }
+
+            // Check if we hit a chance node (street transition)
+            if let TreeNode::Chance { children, .. } = &self.tree[current_id as usize] {
+                current_street = current_street.next()?;
+                // Skip past chance node to its first child
+                current_id = children.first()?.1;
+            }
+        }
+
+        Some(current_street)
     }
 
     /// Walk the solved tree along `action_seq`, multiplying each player's combo
@@ -1687,6 +1757,156 @@ impl SubgameSolver {
             result.push((action, ev));
         }
         Some(result)
+    }
+
+    pub fn get_river_strategy(&self, turn_line: &[Action], river_card: u8) -> Option<RiverStrategyInfo> {
+        let cm = &self.combo_map;
+        let arena = self.arena.as_slice();
+
+        // Walk the turn tree to the river chance node.
+        let mut current_id = self.root_id;
+        for &action in turn_line {
+            match &self.tree[current_id as usize] {
+                TreeNode::Decision { actions: node_acts, children: node_ch, .. } => {
+                    let a_idx = node_acts.iter().position(|&a| a == action)?;
+                    current_id = node_ch[a_idx];
+                }
+                _ => return None,
+            }
+        }
+
+        let (children, iso_perms, iso_cards) = match &self.tree[current_id as usize] {
+            TreeNode::Chance { children, iso_perms, iso_cards, .. } => (children, iso_perms, iso_cards),
+            _ => return None,
+        };
+
+        // Find the canonical child that covers `river_card` and the permutation
+        // that maps the canonical combos to this actual card.
+        let mut river_id = 0u32;
+        let mut maybe_perm: Option<[u16; NUM_COMBOS]> = None;
+        let mut found = false;
+        for (i, &(canonical_card, child_id)) in children.iter().enumerate() {
+            if canonical_card == river_card {
+                river_id = child_id;
+                found = true;
+                break;
+            }
+            if let Some(cards) = iso_cards.get(i) {
+                if let Some(perms) = iso_perms.get(i) {
+                    for (p, &card) in cards.iter().enumerate() {
+                        if card == river_card {
+                            river_id = child_id;
+                            maybe_perm = Some(perms[p]);
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            if found { break; }
+        }
+        if !found { return None; }
+
+        let (player, actions, cfr_idx) = match &self.tree[river_id as usize] {
+            TreeNode::Decision { player, actions, cfr_idx, .. } => (*player, actions.clone(), *cfr_idx as usize),
+            _ => return None,
+        };
+
+        // Extract ranges at the turn line and zero combos that contain the river card.
+        let mut ranges = self.extract_ranges_after_line(turn_line)?;
+        for &ci in CARD_COMBOS[river_card as usize].iter() {
+            ranges[0].weights[ci as usize] = 0.0;
+            ranges[1].weights[ci as usize] = 0.0;
+        }
+
+        // Build compact reach arrays for eval_avg_strategy.
+        let mut reach = [[0.0f32; NUM_COMBOS]; 2];
+        for c in 0..cm.live_count {
+            let orig = cm.live_to_combo[c] as usize;
+            reach[0][c] = ranges[0].weights[orig];
+            reach[1][c] = ranges[1].weights[orig];
+        }
+
+        // Compute the river state and the raw utility at the river decision node.
+        let state = self.game_state_after_line(turn_line)?.deal_street(&[river_card]);
+        let raw_util = eval_avg_strategy(
+            &self.tree, &self.cfr, arena, &self.config, &self.sd_cache, cm,
+            &state, &reach, player, river_id,
+        );
+
+        // Compute opponent card-removal normalization.
+        let opp = 1 - player as usize;
+        let mut per_card_opp = [0.0f32; 52];
+        let mut total_opp_reach = 0.0f32;
+        for oc in 0..cm.live_count {
+            let r = reach[opp][oc];
+            if r <= 0.0 { continue; }
+            let orig = cm.live_to_combo[oc] as usize;
+            let (o1, o2) = combo_from_index(orig as u16);
+            total_opp_reach += r;
+            per_card_opp[o1 as usize] += r;
+            per_card_opp[o2 as usize] += r;
+        }
+
+        // Compute canonical average strategy for the river node.
+        let n_act = actions.len();
+        let avg_strat = compute_avg_strat_flat(
+            &self.cfr[cfr_idx], arena,
+            self.config.exploration_eps, self.config.softmax_temp,
+        );
+
+        // Build the inverse permutation if needed.
+        let inverse: Option<Vec<usize>> = maybe_perm.map(|perm| {
+            let mut inv = vec![cm.live_count; cm.live_count];
+            for c in 0..cm.live_count {
+                let pc = perm[c] as usize;
+                if pc < cm.live_count {
+                    inv[pc] = c;
+                }
+            }
+            inv
+        });
+
+        let mut combos = Vec::new();
+        for pc in 0..cm.live_count {
+            let orig = cm.live_to_combo[pc] as usize;
+
+            // Skip combos that contain the river card or did not reach the turn line.
+            if ranges[player as usize].weights[orig] <= 1e-6 { continue; }
+
+            let canonical_c = match &inverse {
+                Some(inv) => {
+                    let c = inv[pc];
+                    if c >= cm.live_count { continue; }
+                    c
+                }
+                None => pc,
+            };
+
+            let base = canonical_c * n_act;
+            let mut action_probs = Vec::new();
+            for a in 0..n_act {
+                let w = avg_strat[base + a];
+                if w > 0.0 {
+                    action_probs.push((actions[a], w));
+                }
+            }
+            if action_probs.is_empty() { continue; }
+
+            let (c1, c2) = combo_from_index(orig as u16);
+            let adj_opp = total_opp_reach - per_card_opp[c1 as usize] - per_card_opp[c2 as usize]
+                + reach[opp][pc];
+            let ev = if adj_opp > 0.0 { raw_util[pc] / adj_opp } else { 0.0 };
+
+            combos.push(RiverComboInfo {
+                orig_idx: orig as u16,
+                action_probs,
+                ev,
+                range_weight: ranges[player as usize].weights[orig],
+            });
+        }
+
+        Some(RiverStrategyInfo { player, actions, combos })
     }
 
     /// Extract root OOP bet fractions and EV gaps per original combo index.
@@ -3039,7 +3259,7 @@ fn cfr_traverse(
                 for v in out[..live_count].iter_mut() { *v = 0.0; }
             }
         }
-        TreeNode::Chance { children, iso_perms, n_actual } => {
+        TreeNode::Chance { children, iso_perms, n_actual, .. } => {
             chance_utility(tree, cfr, arena_ptr, config, sd_cache, combo_map, node_locks, state, reach, pure_t_reach, traverser,
                 children, iso_perms, *n_actual, ancestor_perms, out);
         }
@@ -3385,9 +3605,9 @@ fn cfr_traverse(
 
                 // Check reward: add pot-relative epsilon to check action's utility at root.
                 // Pushes indifferent hands toward check → passive NE (closer to GTO+/Pio).
-                // eps = pref_beta * pot. Optimal: pref_beta=8.0 (9.1% avg diff vs GTO+).
+                // eps = (pref_beta / 100) * pot. Optimal: pref_beta=8.0 (9.1% avg diff vs GTO+).
                 if cfr_idx == 0 && config.pref_beta > 0.0 && n_actions >= 2 {
-                    let eps = config.pref_beta * config.pot as f32;
+                    let eps = config.pref_beta * config.pot as f32 / 100.0;
                     for c in 0..live_count {
                         action_utils[0][c] += eps;
                     }
@@ -3853,7 +4073,7 @@ pub(crate) fn eval_avg_strategy(
             { let _ = vn_ptr; }
             util
         }
-        TreeNode::Chance { children, iso_perms, n_actual } => {
+        TreeNode::Chance { children, iso_perms, n_actual, .. } => {
             chance_eval_parallel(tree, cfr, arena, config, combo_map, state, reach, children, iso_perms, *n_actual,
                 |t, c, a, cfg, cm, st, r, nid| eval_avg_strategy(t, c, a, cfg, sd_cache, cm, st, r, player, nid))
         }
@@ -3929,7 +4149,7 @@ pub(crate) fn br_traverse(
             { let _ = vn_ptr; }
             util
         }
-        TreeNode::Chance { children, iso_perms, n_actual } => {
+        TreeNode::Chance { children, iso_perms, n_actual, .. } => {
             chance_eval_parallel(tree, cfr, arena, config, combo_map, state, reach, children, iso_perms, *n_actual,
                 |t, c, a, cfg, cm, st, r, nid| br_traverse(t, c, a, cfg, sd_cache, cm, st, r, br_player, nid))
         }
@@ -4153,7 +4373,7 @@ mod tests {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -4176,7 +4396,7 @@ mod tests {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -4197,7 +4417,7 @@ mod tests {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -4224,7 +4444,7 @@ mod tests {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -4253,7 +4473,7 @@ mod tests {
             bet_config: None,
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
-            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, par_decision_depth: u32::MAX,
+            depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
         };
 
         // Determine root actions and lock OOP to check-only (action 0 = Check = 100%)

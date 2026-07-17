@@ -280,7 +280,7 @@ enum Commands {
         pref_delta: f32,
 
         /// Root check reward: pot-relative epsilon for passive NE selection.
-        /// Adds pref_beta * pot to check action's utility. Try 7.0-8.0.
+        /// Adds (pref_beta / 100) * pot to check action's utility. Try 7.0-8.0.
         #[arg(long, default_value_t = 0.0)]
         pref_beta: f32,
 
@@ -927,7 +927,7 @@ fn cmd_solve(
         pref_beta_all_nodes: pref_beta_all,
         pruning,
         combo_check_bias: None, frozen_warmup, unfreeze_decay,
-        early_stop_pct: 0.0,
+        early_stop_pct: 0.0, early_stop_patience: 2,
         par_decision_depth: u32::MAX,
     };
 
@@ -989,7 +989,7 @@ fn cmd_solve(
     } else if algorithm == "qre" {
         println!("  Algorithm: QRE (vanilla CFR + softmax, temp={:.1})", solver.config.softmax_temp);
         solver.solve_with_callback(|iter, s| {
-            let expl = s.exploitability_pct();
+            let expl = s.last_exploitability_pct.unwrap_or_else(|| s.exploitability_pct());
             println!("  iter {:>5}: exploitability = {:.4}% pot ({} nodes)", iter, expl, s.num_decision_nodes());
         });
     } else if algorithm == "qre2" {
@@ -1001,7 +1001,7 @@ fn cmd_solve(
     } else {
         let mut prev_snap: Option<Vec<f32>> = None;
         solver.solve_with_callback(|iter, s| {
-            let expl_avg = s.exploitability_pct();
+            let expl_avg = s.last_exploitability_pct.unwrap_or_else(|| s.exploitability_pct());
             let expl_cur = s.exploitability_current_pct();
             let (avg_reg, nz_frac, drift) = s.regret_policy_stats(prev_snap.as_deref());
             println!("  iter {:>5}: avg_expl={:.4}% cur_expl={:.4}% reg={:.4} nz={:.2}% drift={:.4} ({} nodes)",
@@ -1055,7 +1055,7 @@ fn cmd_solve(
                 frozen_root: Some(frozen),
                 check_bias: 0.0,
                 pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0,
-                early_stop_pct: 0.0,
+                early_stop_pct: 0.0, early_stop_patience: 2,
                 par_decision_depth: u32::MAX,
             };
             let mut solver2 = SubgameSolver::new(config2);
@@ -1487,7 +1487,7 @@ fn cmd_batch_run(
             current_iteration: 0,
             use_iso: true,
             rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0,
-            early_stop_pct: 0.0,
+            early_stop_pct: 0.0, early_stop_patience: 2,
             par_decision_depth: u32::MAX,
         };
 
