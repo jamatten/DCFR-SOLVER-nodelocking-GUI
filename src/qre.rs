@@ -7,7 +7,7 @@
 use crate::card::{NUM_COMBOS, CARD_COMBOS};
 use crate::cfr::{
     SubgameSolver, TreeNode, CfrData, ComboMap, ShowdownCache, SubgameConfig,
-    fold_utility, showdown_utility_cached,
+    fold_utility, showdown_utility_cached, MAX_ACTIONS,
 };
 use crate::game::{GameState, Player, OOP, IP};
 use rayon::prelude::*;
@@ -19,6 +19,7 @@ use std::cell::RefCell;
 
 thread_local! {
     static QRE_BUF_POOL: RefCell<Vec<Box<[f32; NUM_COMBOS]>>> = const { RefCell::new(Vec::new()) };
+    static QRE_ACTION_UTILS_POOL: RefCell<Vec<Vec<[f32; NUM_COMBOS]>>> = const { RefCell::new(Vec::new()) };
 }
 
 #[inline]
@@ -31,6 +32,18 @@ fn pop_buf() -> Box<[f32; NUM_COMBOS]> {
 #[inline]
 fn push_buf(buf: Box<[f32; NUM_COMBOS]>) {
     QRE_BUF_POOL.with(|pool| pool.borrow_mut().push(buf));
+}
+
+#[inline]
+fn pop_action_utils() -> Vec<[f32; NUM_COMBOS]> {
+    QRE_ACTION_UTILS_POOL.with(|pool| {
+        pool.borrow_mut().pop().unwrap_or_else(|| vec![[0.0f32; NUM_COMBOS]; MAX_ACTIONS])
+    })
+}
+
+#[inline]
+fn push_action_utils(buf: Vec<[f32; NUM_COMBOS]>) {
+    QRE_ACTION_UTILS_POOL.with(|pool| pool.borrow_mut().push(buf));
 }
 
 // ---------------------------------------------------------------------------
@@ -113,6 +126,42 @@ impl GradBuf {
     }
 }
 
+// Preallocate all slots from the tree to avoid first-iteration allocation spikes.
+fn preallocate_grad_buf(grad: &mut GradBuf, tree: &[TreeNode], cfr: &[CfrData]) {
+    for node in tree {
+        if let TreeNode::Decision { actions, cfr_idx, .. } = node {
+            let idx = *cfr_idx as usize;
+            grad.ensure(idx, actions.len(), cfr[idx].live_count);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Target buffer — reusable output for softmax target strategies
+// ---------------------------------------------------------------------------
+
+struct TargetBuf {
+    data: Vec<Option<Vec<f32>>>,
+}
+
+impl TargetBuf {
+    fn new(tree: &[TreeNode], cfr: &[CfrData]) -> Self {
+        let n_cfr = cfr.len();
+        let mut data: Vec<Option<Vec<f32>>> = (0..n_cfr).map(|_| None).collect();
+        for node in tree {
+            if let TreeNode::Decision { actions, cfr_idx, .. } = node {
+                let idx = *cfr_idx as usize;
+                if data[idx].is_none() {
+                    let len = actions.len() * cfr[idx].live_count;
+                    data[idx] = Some(vec![0.0f32; len]);
+                }
+            }
+        }
+        TargetBuf { data }
+    }
+
+}
+
 // ---------------------------------------------------------------------------
 // CF traversal — computes counterfactual values for target_player
 // ---------------------------------------------------------------------------
@@ -188,57 +237,143 @@ fn cf_traverse(
             let acting = *acting_player;
             let cfr_idx_val = *cfr_idx as usize;
             let n_act = actions.len();
-            let grad_buf = unsafe { &mut *grad_buf_ptr };
+
+            // Zero-reach early out: if either player has no reach at this node,
+            // the subtree contributes nothing to the target player's utility.
+            let target_p = target_player as usize;
+            let opp_p = 1 - target_p;
+            let mut target_reach_zero = true;
+            let mut opp_reach_zero = true;
+            for c in 0..live_count {
+                if reach[target_p][c] > 0.0 { target_reach_zero = false; }
+                if reach[opp_p][c] > 0.0 { opp_reach_zero = false; }
+                if !target_reach_zero && !opp_reach_zero { break; }
+            }
+            if target_reach_zero || opp_reach_zero {
+                for v in out[..live_count].iter_mut() { *v = 0.0; }
+                return;
+            }
+
+            let use_par = config.par_decision_depth < u32::MAX
+                && cfr[cfr_idx_val].decision_depth < config.par_decision_depth
+                && n_act > 1;
 
             if acting == target_player {
-                grad_buf.ensure(cfr_idx_val, n_act, live_count);
-
-                let mut action_bufs: Vec<Box<[f32; NUM_COMBOS]>> = Vec::with_capacity(n_act);
-                for a in 0..n_act {
-                    let mut buf = pop_buf();
-                    let next_state = state.apply(actions[a]);
-                    cf_traverse(
-                        tree, cfr, config, sd_cache, combo_map,
-                        &next_state, reach, target_player, children[a],
-                        my_strats, opp_strats, grad_buf_ptr, live_count,
-                        &mut buf,
-                    );
-                    action_bufs.push(buf);
-                }
+                unsafe { (*grad_buf_ptr).ensure(cfr_idx_val, n_act, live_count); }
 
                 let strat = my_strats[cfr_idx_val].as_ref().unwrap();
-                let grad = grad_buf.get_mut(cfr_idx_val);
                 for v in out[..live_count].iter_mut() { *v = 0.0; }
 
-                for c in 0..live_count {
+                let mut action_utils = pop_action_utils();
+
+                if use_par {
+                    let gbp_usize = grad_buf_ptr as usize;
+                    action_utils[..n_act].par_iter_mut().enumerate().for_each(|(a, buf)| {
+                        let next_state = state.apply(actions[a]);
+                        let gbp = gbp_usize as *mut GradBuf;
+                        cf_traverse(
+                            tree, cfr, config, sd_cache, combo_map,
+                            &next_state, reach, target_player, children[a],
+                            my_strats, opp_strats, gbp, live_count, buf,
+                        );
+                    });
+                } else {
                     for a in 0..n_act {
-                        grad[a * live_count + c] = action_bufs[a][c];
-                        out[c] += strat.get(a, c) * action_bufs[a][c];
+                        let next_state = state.apply(actions[a]);
+                        cf_traverse(
+                            tree, cfr, config, sd_cache, combo_map,
+                            &next_state, reach, target_player, children[a],
+                            my_strats, opp_strats, grad_buf_ptr, live_count,
+                            &mut action_utils[a],
+                        );
                     }
                 }
 
-                for buf in action_bufs { push_buf(buf); }
+                let grad = unsafe { (&mut *grad_buf_ptr).get_mut(cfr_idx_val) };
+                for c in 0..live_count {
+                    for a in 0..n_act {
+                        grad[a * live_count + c] = action_utils[a][c];
+                        out[c] += strat.get(a, c) * action_utils[a][c];
+                    }
+                }
+
+                push_action_utils(action_utils);
             } else {
                 let opp_node = opp_strats[cfr_idx_val].as_ref().unwrap();
                 for v in out[..live_count].iter_mut() { *v = 0.0; }
                 let p = acting as usize;
-                let mut au = pop_buf();
-                for a in 0..n_act {
-                    let next_state = state.apply(actions[a]);
-                    let mut next_reach = *reach;
-                    for c in 0..live_count {
-                        if next_reach[p][c] <= 0.0 { continue; }
-                        next_reach[p][c] *= opp_node.get(a, c);
+
+                // Regret-based pruning for opponent actions: skip actions where no
+                // reach flows through (opponent strategy * reach is zero for all combos).
+                let mut pruned = [false; MAX_ACTIONS];
+                let pruning_active = config.pruning
+                    && config.cfr_plus
+                    && config.current_iteration >= 50
+                    && config.current_iteration % 50 != 0;
+                if pruning_active && n_act >= 2 {
+                    for a in 0..n_act {
+                        let mut flow = 0.0f32;
+                        for c in 0..live_count {
+                            if reach[p][c] > 0.0 {
+                                flow += opp_node.get(a, c) * reach[p][c];
+                            }
+                        }
+                        pruned[a] = flow == 0.0;
                     }
-                    cf_traverse(
-                        tree, cfr, config, sd_cache, combo_map,
-                        &next_state, &next_reach, target_player, children[a],
-                        my_strats, opp_strats, grad_buf_ptr, live_count,
-                        &mut au,
-                    );
-                    for c in 0..live_count { out[c] += au[c]; }
+                    let n_pruned = pruned[..n_act].iter().filter(|&&p| p).count();
+                    if n_pruned == n_act {
+                        pruned[..n_act].fill(false);
+                    }
                 }
-                push_buf(au);
+
+                let mut action_utils = pop_action_utils();
+
+                if use_par {
+                    let gbp_usize = grad_buf_ptr as usize;
+                    action_utils[..n_act].par_iter_mut().enumerate().for_each(|(a, buf)| {
+                        if pruned[a] {
+                            for v in buf[..live_count].iter_mut() { *v = 0.0; }
+                            return;
+                        }
+                        let next_state = state.apply(actions[a]);
+                        let mut next_reach = *reach;
+                        for c in 0..live_count {
+                            if next_reach[p][c] > 0.0 {
+                                next_reach[p][c] *= opp_node.get(a, c);
+                            }
+                        }
+                        let gbp = gbp_usize as *mut GradBuf;
+                        cf_traverse(
+                            tree, cfr, config, sd_cache, combo_map,
+                            &next_state, &next_reach, target_player, children[a],
+                            my_strats, opp_strats, gbp, live_count, buf,
+                        );
+                    });
+                } else {
+                    for a in 0..n_act {
+                        if pruned[a] { continue; }
+                        let next_state = state.apply(actions[a]);
+                        let mut next_reach = *reach;
+                        for c in 0..live_count {
+                            if next_reach[p][c] > 0.0 {
+                                next_reach[p][c] *= opp_node.get(a, c);
+                            }
+                        }
+                        cf_traverse(
+                            tree, cfr, config, sd_cache, combo_map,
+                            &next_state, &next_reach, target_player, children[a],
+                            my_strats, opp_strats, grad_buf_ptr, live_count,
+                            &mut action_utils[a],
+                        );
+                    }
+                }
+
+                for a in 0..n_act {
+                    if pruned[a] { continue; }
+                    for c in 0..live_count { out[c] += action_utils[a][c]; }
+                }
+
+                push_action_utils(action_utils);
             }
         }
     }
@@ -252,19 +387,24 @@ fn compute_softmax_target(
     strats: &[Option<QreStrat>],
     grad_buf: &GradBuf,
     lambda: f32,
-) -> Vec<Option<Vec<f32>>> {
-    strats.iter().enumerate().map(|(idx, strat_opt)| {
-        let strat = match strat_opt {
+    targets: &mut TargetBuf,
+) {
+    let TargetBuf { data } = targets;
+    data.par_iter_mut().enumerate().for_each(|(idx, target_opt)| {
+        let strat = match &strats[idx] {
             Some(s) => s,
-            None => return None,
+            None => return,
         };
         let grad = match &grad_buf.data[idx] {
             Some(g) => g,
-            None => return None,
+            None => return,
+        };
+        let target = match target_opt.as_mut() {
+            Some(t) => t,
+            None => return,
         };
         let n_act = strat.n_actions;
         let lc = strat.live_count;
-        let mut target = vec![0.0f32; n_act * lc];
 
         for c in 0..lc {
             // log-sum-exp trick for numerical stability
@@ -280,9 +420,14 @@ fn compute_softmax_target(
                 continue;
             }
 
+            // Compute each exp once, storing it in the target buffer, and skip
+            // the wasted exp(1.0) for the max-action (its exponent is 1.0).
             let mut sum_exp = 0.0f32;
             for a in 0..n_act {
-                sum_exp += (lambda * grad[a * lc + c] - max_val).exp();
+                let diff = lambda * grad[a * lc + c] - max_val;
+                let e = if diff == 0.0 { 1.0 } else { diff.exp() };
+                target[a * lc + c] = e;
+                sum_exp += e;
             }
 
             if sum_exp <= 0.0 || !sum_exp.is_finite() {
@@ -293,32 +438,31 @@ fn compute_softmax_target(
 
             let inv_sum = 1.0 / sum_exp;
             for a in 0..n_act {
-                target[a * lc + c] = (lambda * grad[a * lc + c] - max_val).exp() * inv_sum;
+                target[a * lc + c] *= inv_sum;
             }
         }
-        Some(target)
-    }).collect()
+    });
 }
 
 /// Apply damped update: strat = (1-α)·strat + α·target
 fn apply_damped_update(
     strats: &mut [Option<QreStrat>],
-    targets: &[Option<Vec<f32>>],
+    targets: &TargetBuf,
     alpha: f32,
 ) {
-    for (idx, strat_opt) in strats.iter_mut().enumerate() {
+    strats.par_iter_mut().enumerate().for_each(|(idx, strat_opt)| {
         let strat = match strat_opt.as_mut() {
             Some(s) => s,
-            None => continue,
+            None => return,
         };
-        let target = match &targets[idx] {
+        let target = match targets.data[idx].as_ref() {
             Some(t) => t,
-            None => continue,
+            None => return,
         };
         for (s, t) in strat.strat.iter_mut().zip(target.iter()) {
             *s = (1.0 - alpha) * *s + alpha * *t;
         }
-    }
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -331,6 +475,7 @@ impl SubgameSolver {
         lambda_target: f32,
         damping: f32,
         anneal: bool,
+        report_every: u32,
         mut callback: F,
     ) {
         let reach = self.initial_reach();
@@ -349,10 +494,20 @@ impl SubgameSolver {
         let mut qre = QreState::new(&self.tree, &self.cfr);
 
         let total = self.config.iterations;
+        // Always report the first iteration for UI feedback; then use report_every spacing.
         let mut next_report = 1u32;
+        // When report_every > 1, also emit a lightweight progress event every iteration
+        // (using the cached exploitability) so the GUI does not appear hung.
+        let progress_every = if report_every > 1 { 1 } else { 0 };
 
         let mut grad_buf_oop = GradBuf::new(n_cfr);
         let mut grad_buf_ip = GradBuf::new(n_cfr);
+        preallocate_grad_buf(&mut grad_buf_oop, &self.tree, &self.cfr);
+        preallocate_grad_buf(&mut grad_buf_ip, &self.tree, &self.cfr);
+
+        let mut targets_oop = TargetBuf::new(&self.tree, &self.cfr);
+        let mut targets_ip = TargetBuf::new(&self.tree, &self.cfr);
+
         let mut root_util = pop_buf();
 
         // Late-stage averaging: accumulate strategies from second half of iterations
@@ -377,6 +532,9 @@ impl SubgameSolver {
         for d in self.cfr.iter_mut() {
             d.cum_strategy = None;
         }
+        // Start with a placeholder so lightweight progress callbacks can report 0%
+        // before the first expensive exploitability calculation is finished.
+        self.last_exploitability_pct = Some(0.0);
 
         // Homotopy: geometric growth from lambda_start to lambda_target
         let lambda_start = if anneal { (lambda_target * 0.001).max(1e-7) } else { lambda_target };
@@ -392,6 +550,7 @@ impl SubgameSolver {
 
         for iter in 0..total {
             self.iteration = iter + 1;
+            self.config.current_iteration = self.iteration;
 
             if anneal && iter > 0 {
                 cur_lambda = (cur_lambda * growth).min(lambda_target);
@@ -415,7 +574,7 @@ impl SubgameSolver {
                     &mut root_util,
                 );
             }
-            let targets_oop = compute_softmax_target(&qre.strats[OOP as usize], &grad_buf_oop, cur_lambda);
+            compute_softmax_target(&qre.strats[OOP as usize], &grad_buf_oop, cur_lambda, &mut targets_oop);
             apply_damped_update(&mut qre.strats[OOP as usize], &targets_oop, alpha);
 
             {
@@ -428,7 +587,7 @@ impl SubgameSolver {
                     &mut root_util,
                 );
             }
-            let targets_ip = compute_softmax_target(&qre.strats[IP as usize], &grad_buf_ip, cur_lambda);
+            compute_softmax_target(&qre.strats[IP as usize], &grad_buf_ip, cur_lambda, &mut targets_ip);
             apply_damped_update(&mut qre.strats[IP as usize], &targets_ip, alpha);
 
             // Accumulate for late-stage averaging
@@ -447,7 +606,10 @@ impl SubgameSolver {
                 avg_count += 1;
             }
 
-            if self.iteration >= next_report || self.iteration == total {
+            let is_full_report = self.iteration >= next_report || self.iteration == total;
+            let is_progress = progress_every > 0 && ((self.iteration - 1) % progress_every == 0);
+
+            if is_full_report {
                 if !arena_allocated {
                     let total_elements: usize = self.cfr.iter()
                         .map(|d| d.live_count * d.n_actions)
@@ -468,15 +630,36 @@ impl SubgameSolver {
                     self.qre_copy_strategy(&qre);
                 }
                 let expl = self.exploitability_pct();
+                self.last_exploitability_pct = Some(expl);
                 if expl < best_expl {
                     best_expl = expl;
                     best_cum = self.cfr.iter().map(|d| d.cum_strategy.clone()).collect();
                 }
                 eprintln!("    λ={:.6} α={:.4}", cur_lambda, alpha);
-                callback(self.iteration, self);
-                while next_report <= self.iteration {
-                    next_report = next_report.saturating_mul(2);
+
+                // Early-stop support (same logic as solve_with_report_interval)
+                if self.config.early_stop_pct > 0.0 {
+                    if expl <= self.config.early_stop_pct {
+                        self.consecutive_below_threshold += 1;
+                    } else {
+                        self.consecutive_below_threshold = 0;
+                    }
+                    if self.consecutive_below_threshold >= self.config.early_stop_patience {
+                        break;
+                    }
                 }
+
+                if report_every > 0 {
+                    next_report += report_every;
+                } else {
+                    while next_report <= self.iteration {
+                        next_report = next_report.saturating_mul(2);
+                    }
+                }
+            }
+
+            if is_full_report || is_progress {
+                callback(self.iteration, self);
             }
         }
 

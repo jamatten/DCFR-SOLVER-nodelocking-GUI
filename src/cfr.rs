@@ -26,7 +26,7 @@ use memmap2::MmapMut;
 
 /// Maximum number of actions at any decision node.
 /// Used for fixed-size stack arrays to avoid heap allocation in the hot path.
-const MAX_ACTIONS: usize = 8;
+pub(crate) const MAX_ACTIONS: usize = 8;
 
 thread_local! {
     /// When true, compute_avg_strat_flat uses regret-matched (current) strategy
@@ -856,6 +856,9 @@ impl ShowdownCache {
 
 pub struct SubgameSolver {
     pub config: SubgameConfig,
+    /// Algorithm name used to produce this solve (e.g. "cfr", "qre2").
+    /// Stored here so exports can label the result; defaults to "cfr".
+    pub algorithm: String,
     pub(crate) tree: Vec<TreeNode>,
     pub(crate) cfr: Vec<CfrData>,
     pub(crate) arena: RegretArena,
@@ -907,6 +910,7 @@ impl SubgameSolver {
         let combo_map = ComboMap::new(config.board, &config.ranges);
         SubgameSolver {
             config,
+            algorithm: "cfr".to_string(),
             tree: Vec::new(),
             cfr: Vec::new(),
             arena: RegretArena::empty(),

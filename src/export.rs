@@ -31,6 +31,7 @@ pub struct SolveConfig {
     pub pot: i32,
     pub stacks: [i32; 2],
     pub street: String,
+    pub algorithm: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -86,6 +87,7 @@ impl SolveResult {
             pot: solver.config.pot,
             stacks: solver.config.stacks,
             street: street_str.to_string(),
+            algorithm: solver.algorithm.clone(),
         };
 
         // Compute EVs for both players

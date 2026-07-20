@@ -605,7 +605,7 @@ fn convex_combine_seq(
 // ---------------------------------------------------------------------------
 
 impl SubgameSolver {
-    pub fn egt_solve<F: FnMut(u32, &SubgameSolver)>(&mut self, mut callback: F) {
+    pub fn egt_solve<F: FnMut(u32, &SubgameSolver)>(&mut self, report_every: u32, mut callback: F) {
         let reach = self.initial_reach();
         let root_state = self.root_state();
 
@@ -626,7 +626,10 @@ impl SubgameSolver {
         let info_tree_ip = InfosetTree::build(&self.tree, &self.cfr, IP);
 
         let total = self.config.iterations;
+        // Always report the first iteration for UI feedback; then use report_every spacing.
         let mut next_report = 1u32;
+        // When report_every > 1, also emit a lightweight progress event every iteration.
+        let progress_every = if report_every > 1 { 1 } else { 0 };
 
         // Operator norm estimate: max utility swing = stack (worst case: fold vs win all-in)
         let l_estimate = self.config.stacks[0] as f32;
@@ -677,6 +680,8 @@ impl SubgameSolver {
         for d in self.cfr.iter_mut() {
             d.cum_strategy = None;
         }
+        // Placeholder exploitability for lightweight progress callbacks before first full report.
+        self.last_exploitability_pct = Some(0.0);
 
         for iter in 0..total {
             self.iteration = iter + 1;
@@ -758,7 +763,10 @@ impl SubgameSolver {
                 mu2 = mu1;
 
             // Progress callback with best-iterate tracking
-            if self.iteration >= next_report || self.iteration == total {
+            let is_full_report = self.iteration >= next_report || self.iteration == total;
+            let is_progress = progress_every > 0 && ((self.iteration - 1) % progress_every == 0);
+
+            if is_full_report {
                 if !arena_allocated {
                     let total_elements: usize = self.cfr.iter()
                         .map(|d| d.live_count * d.n_actions)
@@ -773,14 +781,35 @@ impl SubgameSolver {
                 }
                 self.copy_final_strategy(&egt);
                 let expl = self.exploitability_pct();
+                self.last_exploitability_pct = Some(expl);
                 if expl < best_expl {
                     best_expl = expl;
                     best_cum = self.cfr.iter().map(|d| d.cum_strategy.clone()).collect();
                 }
-                callback(self.iteration, self);
-                while next_report <= self.iteration {
-                    next_report = next_report.saturating_mul(2);
+
+                // Early-stop support (same logic as solve_with_report_interval)
+                if self.config.early_stop_pct > 0.0 {
+                    if expl <= self.config.early_stop_pct {
+                        self.consecutive_below_threshold += 1;
+                    } else {
+                        self.consecutive_below_threshold = 0;
+                    }
+                    if self.consecutive_below_threshold >= self.config.early_stop_patience {
+                        break;
+                    }
                 }
+
+                if report_every > 0 {
+                    next_report += report_every;
+                } else {
+                    while next_report <= self.iteration {
+                        next_report = next_report.saturating_mul(2);
+                    }
+                }
+            }
+
+            if is_full_report || is_progress {
+                callback(self.iteration, self);
             }
         }
 

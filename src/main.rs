@@ -936,6 +936,7 @@ fn cmd_solve(
     }
 
     let mut solver = SubgameSolver::new(config);
+    solver.algorithm = algorithm.to_string();
 
     // Apply node locks (must happen before solve so tree-build resolves them)
     if !node_locks_str.is_empty() {
@@ -982,8 +983,8 @@ fn cmd_solve(
 
     if algorithm == "egt" {
         println!("  Algorithm: EGT (Excessive Gap Technique → MaxEnt NE)");
-        solver.egt_solve(|iter, s| {
-            let expl = s.exploitability_pct();
+        solver.egt_solve(0, |iter, s| {
+            let expl = s.last_exploitability_pct.unwrap_or_else(|| s.exploitability_pct());
             println!("  iter {:>5}: exploitability = {:.4}% pot ({} nodes)", iter, expl, s.num_decision_nodes());
         });
     } else if algorithm == "qre" {
@@ -994,8 +995,8 @@ fn cmd_solve(
         });
     } else if algorithm == "qre2" {
         println!("  Algorithm: QRE2 (fixed-point, λ={}, damping={}, anneal={})", qre_lambda, qre_damping, qre_anneal);
-        solver.qre_solve(qre_lambda, qre_damping, qre_anneal, |iter, s| {
-            let expl = s.exploitability_pct();
+        solver.qre_solve(qre_lambda, qre_damping, qre_anneal, 0, |iter, s| {
+            let expl = s.last_exploitability_pct.unwrap_or_else(|| s.exploitability_pct());
             println!("  iter {:>5}: exploitability = {:.4}% pot ({} nodes)", iter, expl, s.num_decision_nodes());
         });
     } else {
@@ -1059,6 +1060,7 @@ fn cmd_solve(
                 par_decision_depth: u32::MAX,
             };
             let mut solver2 = SubgameSolver::new(config2);
+            solver2.algorithm = solver.algorithm.clone();
             println!("  Phase 2: re-solving with frozen root ({} iterations)...", iterations);
             solver2.solve();
             let expl2 = solver2.exploitability_pct();
