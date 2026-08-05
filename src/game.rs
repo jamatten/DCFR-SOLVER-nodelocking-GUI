@@ -60,6 +60,12 @@ pub enum Action {
     AllIn,
 }
 
+impl Action {
+    pub fn is_aggressive(&self) -> bool {
+        matches!(self, Action::Bet(_) | Action::AllIn)
+    }
+}
+
 impl fmt::Display for Action {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -128,6 +134,10 @@ pub struct BetConfig {
     /// bet sizes with the geometric size that reaches all-in in exactly 2 bets.
     /// Matches GTO+ "With only 2 bets left, use geometric sizing".
     pub geometric_2bets: bool,
+    /// Optional per-player street/depth size overrides. If set for a player and street,
+    /// that player's legal actions use these sizes instead of the shared `sizes`.
+    /// player_sizes[player][street] = Some(depths). None for a street falls back to `sizes`.
+    pub player_sizes: [Option<[Vec<Vec<BetSize>>; 4]>; 2],
 }
 
 impl Default for BetConfig {
@@ -163,14 +173,24 @@ impl Default for BetConfig {
             allin_pot_ratio: 0.0,
             no_donk: false,
             geometric_2bets: false,
+            player_sizes: [None, None],
         }
     }
 }
 
 impl BetConfig {
-    /// Get bet sizes for a given street and depth.
-    pub fn bet_sizes(&self, street: Street, depth: u8) -> &[BetSize] {
+    /// Get bet sizes for a given street, depth, and player.
+    /// If a per-player override exists for this street, use it; otherwise fall back to shared `sizes`.
+    pub fn bet_sizes(&self, street: Street, depth: u8, player: Player) -> &[BetSize] {
         let idx = street.index();
+        let player_idx = player as usize;
+        if let Some(player_streets) = self.player_sizes.get(player_idx).and_then(|o| o.as_ref()) {
+            let depths = &player_streets[idx];
+            let d = (depth as usize).min(depths.len().saturating_sub(1));
+            if d < depths.len() {
+                return &depths[d];
+            }
+        }
         let depths = &self.sizes[idx];
         let d = (depth as usize).min(depths.len().saturating_sub(1));
         if d < depths.len() {
@@ -182,12 +202,13 @@ impl BetConfig {
 }
 
 /// Returns available bet sizes for the current situation (default config).
-fn default_bet_sizes(street: Street, depth: u8) -> &'static [BetSize] {
+/// Default sizes are the same for both players, so the player argument is ignored.
+fn default_bet_sizes(street: Street, depth: u8, _player: Player) -> &'static [BetSize] {
     static DEFAULT: std::sync::OnceLock<BetConfig> = std::sync::OnceLock::new();
     let config = DEFAULT.get_or_init(BetConfig::default);
     // SAFETY: BetConfig::default() creates owned data that lives in OnceLock
     // We can return a reference because OnceLock data is 'static.
-    config.bet_sizes(street, depth)
+    config.bet_sizes(street, depth, OOP)
 }
 
 // ---------------------------------------------------------------------------
@@ -370,7 +391,7 @@ impl GameState {
                         }
                     }
                 } else {
-                    let sizes = self.get_bet_sizes(raise_depth);
+                    let sizes = self.get_bet_sizes(self.to_act, raise_depth);
                     for &size in sizes {
                         let raise_amount = compute_bet_amount(size, pot_after_call);
                         let total_bet = opp_bet + raise_amount;
@@ -436,7 +457,7 @@ impl GameState {
                     any_bet_needs_allin = true;
                 }
             } else {
-            let sizes = self.get_bet_sizes(bet_depth);
+            let sizes = self.get_bet_sizes(self.to_act, bet_depth);
             for &size in sizes {
                 let amount = compute_bet_amount(size, current_pot);
                 if amount >= my_stack {
@@ -471,11 +492,11 @@ impl GameState {
         actions
     }
 
-    /// Get bet sizes for current street and depth, using custom config if available.
-    fn get_bet_sizes(&self, depth: u8) -> &[BetSize] {
+    /// Get bet sizes for current street, depth, and acting player, using custom config if available.
+    fn get_bet_sizes(&self, player: Player, depth: u8) -> &[BetSize] {
         match &self.bet_config {
-            Some(config) => config.bet_sizes(self.street, depth),
-            None => default_bet_sizes(self.street, depth),
+            Some(config) => config.bet_sizes(self.street, depth, player),
+            None => default_bet_sizes(self.street, depth, player),
         }
     }
 
@@ -812,5 +833,39 @@ mod tests {
         let g2 = g.apply(Action::Call);
         assert_eq!(g2.invested(OOP), 2);
         assert_eq!(g2.invested(IP), 2);
+    }
+
+    #[test]
+    fn test_per_player_bet_sizes() {
+        use crate::card::card;
+        let mut bc = BetConfig::default();
+        // Shared turn bet size is 50% for everyone.
+        bc.sizes[Street::Turn.index()] = vec![vec![BetSize::Frac(50, 100)]];
+        // OOP turn bet size is overridden to 33%, IP to 75%.
+        let mut oop_turn = [Vec::new(), Vec::new(), Vec::new(), Vec::new()];
+        oop_turn[Street::Turn.index()] = vec![vec![BetSize::Frac(33, 100)]];
+        let mut ip_turn = [Vec::new(), Vec::new(), Vec::new(), Vec::new()];
+        ip_turn[Street::Turn.index()] = vec![vec![BetSize::Frac(75, 100)]];
+        bc.player_sizes = [Some(oop_turn), Some(ip_turn)];
+
+        let board = Hand::new().add(card(12, 3)).add(card(11, 2)).add(card(8, 1));
+        let g = GameState::new_postflop_with_bets(
+            Street::Turn,
+            20,
+            [90, 90],
+            board,
+            std::sync::Arc::new(bc),
+        );
+
+        let oop_actions = g.actions();
+        assert!(oop_actions.contains(&Action::Bet(BetSize::Frac(33, 100))));
+        assert!(!oop_actions.contains(&Action::Bet(BetSize::Frac(50, 100))));
+        assert!(!oop_actions.contains(&Action::Bet(BetSize::Frac(75, 100))));
+
+        let g2 = g.apply(Action::Check);
+        let ip_actions = g2.actions();
+        assert!(ip_actions.contains(&Action::Bet(BetSize::Frac(75, 100))));
+        assert!(!ip_actions.contains(&Action::Bet(BetSize::Frac(33, 100))));
+        assert!(!ip_actions.contains(&Action::Bet(BetSize::Frac(50, 100))));
     }
 }

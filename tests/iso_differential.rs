@@ -48,6 +48,7 @@ fn make_config(board: Hand, street: Street, iterations: u32, use_iso: bool) -> S
         frozen_root: None, check_bias: 0.0,
         pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false,
         combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 0.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
+        passive_tiebreak_pct: 0.0, passive_tiebreak_strength: 1.0,
     }
 }
 

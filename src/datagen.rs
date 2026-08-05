@@ -198,6 +198,7 @@ fn config_a_bet_config() -> Arc<BetConfig> {
         allin_pot_ratio: 0.0,
         no_donk: false,
         geometric_2bets: false,
+        player_sizes: [None, None],
     })
 }
 
@@ -234,6 +235,7 @@ fn solve_subgame(
         check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false,
         pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0,
         early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
+        passive_tiebreak_pct: 0.0, passive_tiebreak_strength: 1.0,
     };
 
     let mut solver = SubgameSolver::new(config);

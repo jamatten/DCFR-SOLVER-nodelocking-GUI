@@ -3,7 +3,7 @@
 use crate::buckets::hand_bucket;
 use crate::card::{card_to_string, combo_from_index, Hand};
 use crate::cfr::SubgameSolver;
-use crate::game::Action;
+use crate::game::{Action, Street};
 use crate::strategy::PreflopChart;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -53,7 +53,7 @@ pub struct ComboStrategy {
     // keeps `SolveResult::from_solver` consistent with that code path.
     #[serde(default, rename = "rangeWeight")]
     pub range_weight: f32, // combo's frequency in the acting player's range (0.0–1.0)
-    /// Semantic hand-bucket code (0..=17). Only populated for nodes whose
+    /// Semantic hand-bucket code (0..=16). Only populated for nodes whose
     /// street matches the solve's starting street, to keep export fast and JSON small.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bucket: Option<u8>,
@@ -68,6 +68,26 @@ pub struct ActionWeight {
 impl SolveResult {
     /// Export subgame solver results.
     pub fn from_solver(solver: &SubgameSolver) -> Self {
+        Self::from_solver_filtered(solver, |_, _, _| true)
+    }
+
+    /// Small-save export: keep only nodes on the solve's primary street and
+    /// the first node of the next street. For a flop solve this is flop nodes
+    /// plus the first turn node after each terminal flop line, which is
+    /// exactly what the GUI's `filterNavigableNodes` displays.
+    pub fn from_solver_small_save(solver: &SubgameSolver) -> Self {
+        let primary = solver.config.street;
+        let next = primary.next();
+        Self::from_solver_filtered(solver, |_, street, parent_street| {
+            street == primary
+                || matches!((parent_street, next), (Some(p), Some(n)) if p == primary && street == n)
+        })
+    }
+
+    fn from_solver_filtered<F>(solver: &SubgameSolver, keep: F) -> Self
+    where
+        F: Fn(&[Action], Street, Option<Street>) -> bool,
+    {
         let mut board_cards: Vec<_> = solver.config.board.iter().collect();
         board_cards.sort_unstable_by(|a, b| b.cmp(a)); // high cards first
         let board_str: String = board_cards.iter()
@@ -76,10 +96,10 @@ impl SolveResult {
             .join("");
 
         let street_str = match solver.config.street {
-            crate::game::Street::Preflop => "preflop",
-            crate::game::Street::Flop => "flop",
-            crate::game::Street::Turn => "turn",
-            crate::game::Street::River => "river",
+            Street::Preflop => "preflop",
+            Street::Flop => "flop",
+            Street::Turn => "turn",
+            Street::River => "river",
         };
 
         let config = SolveConfig {
@@ -100,48 +120,47 @@ impl SolveResult {
 
         // Extract root node strategy
         let mut strategies = Vec::new();
-        if let Some(combos) = solver.get_strategy(&[]) {
-            let street_str = match solver.config.street {
-                crate::game::Street::Preflop => "preflop",
-                crate::game::Street::Flop => "flop",
-                crate::game::Street::Turn => "turn",
-                crate::game::Street::River => "river",
-            };
-            let ranges = solver.extract_ranges_after_line(&[])
-                .unwrap_or_else(|| [solver.config.ranges[0].clone(), solver.config.ranges[1].clone()]);
-            let node_strat = build_node_strategy(
-                "root",
-                "OOP",
-                street_str,
-                &combos,
-                Some(&oop_ev),
-                Some(&ranges[0].weights),
-                Some(solver.config.board),
-                &mut bucket_cache,
-            );
-            strategies.push(node_strat);
+        if keep(&[], solver.config.street, None) {
+            if let Some(combos) = solver.get_strategy(&[]) {
+                let ranges = solver.extract_ranges_after_line(&[])
+                    .unwrap_or_else(|| [solver.config.ranges[0].clone(), solver.config.ranges[1].clone()]);
+                let node_strat = build_node_strategy(
+                    "root",
+                    "OOP",
+                    street_str,
+                    &combos,
+                    Some(&oop_ev),
+                    Some(&ranges[0].weights),
+                    Some(solver.config.board),
+                    &mut bucket_cache,
+                );
+                strategies.push(node_strat);
+            }
         }
 
-        // Walk through nodes to find all decision points
+        // Walk through nodes to find kept decision points
         for action_seq in solver.iter_decision_nodes() {
             if action_seq.is_empty() {
                 continue; // already handled root
+            }
+            let street = solver.get_node_street(action_seq).unwrap_or(solver.config.street);
+            let parent_street = solver.get_node_street(&action_seq[..action_seq.len() - 1]);
+            if !keep(action_seq, street, parent_street) {
+                continue;
             }
             if let Some(combos) = solver.get_strategy(action_seq) {
                 let node_desc = action_seq.iter()
                     .map(|a| format!("{}", a))
                     .collect::<Vec<_>>()
                     .join(" → ");
-                
-                // Determine which street this node belongs to
-                let street = solver.get_node_street(action_seq).unwrap_or(solver.config.street);
+
                 let street_str = match street {
-                    crate::game::Street::Preflop => "preflop",
-                    crate::game::Street::Flop => "flop",
-                    crate::game::Street::Turn => "turn",
-                    crate::game::Street::River => "river",
+                    Street::Preflop => "preflop",
+                    Street::Flop => "flop",
+                    Street::Turn => "turn",
+                    Street::River => "river",
                 };
-                
+
                 let (player, player_idx, ev_ref) = match solver.get_player(action_seq) {
                     Some(crate::game::OOP) => ("OOP", 0usize, &oop_ev),
                     Some(crate::game::IP) => ("IP", 1usize, &ip_ev),

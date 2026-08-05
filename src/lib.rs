@@ -13,6 +13,7 @@ pub mod strategy;
 pub mod export;
 pub mod buckets;
 pub mod kuhn;
+pub mod auto_size;
 #[cfg(feature = "nn")]
 pub mod valuenet;
 #[cfg(feature = "nn")]

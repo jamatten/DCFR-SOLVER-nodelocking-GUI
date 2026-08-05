@@ -1,6 +1,6 @@
 /// Semantic hand-bucket classification for the GUI.
 ///
-/// Returns small integer codes (0..=17) so the frontend can map them to
+/// Returns small integer codes (0..=16) so the frontend can map them to
 /// human-readable labels without paying for string payload per combo.
 ///
 /// Bucket codes are ordered by approximate made-hand strength.
@@ -24,8 +24,7 @@ pub const FOURTH_PAIR: u8 = 12;
 pub const FIFTH_PAIR: u8 = 13;
 pub const UNDERPAIR: u8 = 14;
 pub const ACE_HIGH: u8 = 15;
-pub const KING_HIGH: u8 = 16;
-pub const QUEEN_HIGH_OR_WORSE: u8 = 17;
+pub const NO_MADE_HAND: u8 = 16;
 
 /// Human-readable label for a bucket code.
 pub fn bucket_label(code: u8) -> &'static str {
@@ -46,8 +45,7 @@ pub fn bucket_label(code: u8) -> &'static str {
         FIFTH_PAIR => "5th Pair",
         UNDERPAIR => "Underpair",
         ACE_HIGH => "Ace High",
-        KING_HIGH => "King High",
-        QUEEN_HIGH_OR_WORSE => "Queen High or worse",
+        NO_MADE_HAND => "No made hand",
         _ => "Unknown",
     }
 }
@@ -65,7 +63,7 @@ pub fn hand_bucket(hole: Hand, board: Hand) -> u8 {
         HandRank::ThreeOfAKind => classify_three_of_a_kind(strength, hole),
         HandRank::TwoPair => TWO_PAIR,
         HandRank::OnePair => classify_one_pair(strength, hole, board),
-        HandRank::HighCard => classify_high_card(strength),
+        HandRank::HighCard => classify_high_card(hole),
     }
 }
 
@@ -114,11 +112,11 @@ fn pair_bucket(pair_rank: u8, board: Hand) -> u8 {
     UNDERPAIR
 }
 
-fn classify_high_card(strength: Strength) -> u8 {
-    match first_kicker(strength) {
-        12 => ACE_HIGH,          // Ace
-        11 => KING_HIGH,
-        _ => QUEEN_HIGH_OR_WORSE, // 10 = Queen and below
+fn classify_high_card(hole: Hand) -> u8 {
+    if hole.iter().any(|c| rank(c) == 12) {
+        ACE_HIGH
+    } else {
+        NO_MADE_HAND
     }
 }
 
@@ -174,10 +172,17 @@ mod tests {
 
     #[test]
     fn test_high_card() {
+        // Board has an Ace; non-Ace unpaired hands are "No made hand".
         let board = h("AhKd7c");
-        assert_eq!(hand_bucket(h("QhJd"), board), ACE_HIGH);
-        assert_eq!(hand_bucket(h("JhTd"), board), ACE_HIGH);
-        assert_eq!(hand_bucket(h("9h8d"), board), ACE_HIGH);
+        assert_eq!(hand_bucket(h("QhJd"), board), NO_MADE_HAND);
+        assert_eq!(hand_bucket(h("JhTd"), board), NO_MADE_HAND);
+        assert_eq!(hand_bucket(h("9h8d"), board), NO_MADE_HAND);
+
+        // Board has no Ace; only unpaired hands with an Ace are "Ace High".
+        let board_no_ace = h("KhQd7c");
+        assert_eq!(hand_bucket(h("AdJh"), board_no_ace), ACE_HIGH);
+        assert_eq!(hand_bucket(h("JsTd"), board_no_ace), NO_MADE_HAND);
+        assert_eq!(hand_bucket(h("9h8d"), board_no_ace), NO_MADE_HAND);
     }
 
     #[test]

@@ -189,11 +189,16 @@ enum Commands {
         #[arg(long, default_value_t = 0.0)]
         purify: f32,
 
-        /// Passive tie-break: push indifferent combos toward check/call.
-        /// Value is EV threshold in chips. Combos with EV gap < threshold get pushed.
-        /// E.g., --passive-tiebreak 0.5
+        /// In-solve passive tiebreak: nudge thin aggressive combos toward the best
+        /// passive action. Value is EV threshold as a percentage of the current pot.
+        /// E.g. --passive-tiebreak 0.1 means 0.1% of pot. 0.0 = disabled (default).
         #[arg(long, default_value_t = 0.0)]
         passive_tiebreak: f32,
+
+        /// Passive tiebreak bonus strength. Multiplies the bonus added to the passive
+        /// action's counterfactual value. 1.0 = default. Higher = stronger nudging.
+        #[arg(long, default_value_t = 1.0)]
+        passive_tiebreak_strength: f32,
 
         /// Per-street bet sizes (override --bet-sizes for specific street).
         /// E.g., --flop-bet "67" --turn-bet "33,67,125" --river-bet "33,67,125"
@@ -512,7 +517,7 @@ fn main() {
         Commands::Train { iterations, abstraction, output, stack, seed } => {
             cmd_train(iterations, &abstraction, &output, stack, seed);
         }
-        Commands::Solve { board, oop_range, ip_range, pot, stack, street, iterations, bet_sizes, raise_sizes, format, output, skip_cum_strategy, no_dcfr, depth_limit, valuenet, allin_pot_ratio, allin_threshold, max_raises, no_donk, geometric, exploration_eps, smooth_threshold, entropy_bonus, entropy_anneal, entropy_root_only, opp_dilute, softmax_temp, lcfr, algorithm, purify, passive_tiebreak, flop_bet, flop_raise, turn_bet, turn_raise, river_bet, river_raise, rake, rake_cap, qre_lambda, qre_damping, qre_anneal, no_iso, rm_floor, alternating, t_weight, frozen_root, two_phase, check_bias, dcfr_gamma, dcfr_alpha, pref_delta, pref_beta, pref_beta_all, pruning, combo_bias, frozen_warmup, unfreeze_decay, node_lock } => {
+        Commands::Solve { board, oop_range, ip_range, pot, stack, street, iterations, bet_sizes, raise_sizes, format, output, skip_cum_strategy, no_dcfr, depth_limit, valuenet, allin_pot_ratio, allin_threshold, max_raises, no_donk, geometric, exploration_eps, smooth_threshold, entropy_bonus, entropy_anneal, entropy_root_only, opp_dilute, softmax_temp, lcfr, algorithm, purify, passive_tiebreak, passive_tiebreak_strength, flop_bet, flop_raise, turn_bet, turn_raise, river_bet, river_raise, rake, rake_cap, qre_lambda, qre_damping, qre_anneal, no_iso, rm_floor, alternating, t_weight, frozen_root, two_phase, check_bias, dcfr_gamma, dcfr_alpha, pref_delta, pref_beta, pref_beta_all, pruning, combo_bias, frozen_warmup, unfreeze_decay, node_lock } => {
             let per_street = PerStreetSizes {
                 flop_bet: flop_bet.as_deref(),
                 flop_raise: flop_raise.as_deref(),
@@ -521,7 +526,7 @@ fn main() {
                 river_bet: river_bet.as_deref(),
                 river_raise: river_raise.as_deref(),
             };
-            cmd_solve(&board, &oop_range, &ip_range, pot, stack, &street, iterations, bet_sizes.as_deref(), raise_sizes.as_deref(), format.as_deref(), &output, skip_cum_strategy, no_dcfr, depth_limit.as_deref(), valuenet.as_deref(), allin_pot_ratio, allin_threshold, max_raises, no_donk, geometric, exploration_eps, smooth_threshold, entropy_bonus, entropy_anneal, entropy_root_only, opp_dilute, softmax_temp, lcfr, &algorithm, purify, passive_tiebreak, &per_street, rake, rake_cap, qre_lambda, qre_damping, qre_anneal, no_iso, rm_floor, alternating, t_weight, frozen_root.as_deref(), two_phase, check_bias, dcfr_gamma, dcfr_alpha, pref_delta, pref_beta, pref_beta_all, pruning, combo_bias.as_deref(), frozen_warmup, unfreeze_decay, &node_lock);
+            cmd_solve(&board, &oop_range, &ip_range, pot, stack, &street, iterations, bet_sizes.as_deref(), raise_sizes.as_deref(), format.as_deref(), &output, skip_cum_strategy, no_dcfr, depth_limit.as_deref(), valuenet.as_deref(), allin_pot_ratio, allin_threshold, max_raises, no_donk, geometric, exploration_eps, smooth_threshold, entropy_bonus, entropy_anneal, entropy_root_only, opp_dilute, softmax_temp, lcfr, &algorithm, purify, passive_tiebreak, passive_tiebreak_strength, &per_street, rake, rake_cap, qre_lambda, qre_damping, qre_anneal, no_iso, rm_floor, alternating, t_weight, frozen_root.as_deref(), two_phase, check_bias, dcfr_gamma, dcfr_alpha, pref_delta, pref_beta, pref_beta_all, pruning, combo_bias.as_deref(), frozen_warmup, unfreeze_decay, &node_lock);
         }
         Commands::Chart { blueprint, output } => {
             cmd_chart(&blueprint, &output);
@@ -761,6 +766,7 @@ fn cmd_solve(
     algorithm: &str,
     purify_pct: f32,
     passive_tiebreak: f32,
+    passive_tiebreak_strength: f32,
     per_street: &PerStreetSizes,
     rake_pct: f32,
     rake_cap: f32,
@@ -863,6 +869,7 @@ fn cmd_solve(
             allin_pot_ratio,
             no_donk,
             geometric_2bets: geometric,
+            player_sizes: [None, None],
         };
         Some(Arc::new(config))
     } else if allin_pot_ratio > 0.0 || allin_threshold > 0.0 || max_raises != 3 || no_donk || geometric {
@@ -929,6 +936,7 @@ fn cmd_solve(
         combo_check_bias: None, frozen_warmup, unfreeze_decay,
         early_stop_pct: 0.0, early_stop_patience: 2,
         par_decision_depth: u32::MAX,
+        passive_tiebreak_pct: passive_tiebreak, passive_tiebreak_strength: passive_tiebreak_strength,
     };
 
     if no_iso {
@@ -1058,6 +1066,7 @@ fn cmd_solve(
                 pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0,
                 early_stop_pct: 0.0, early_stop_patience: 2,
                 par_decision_depth: u32::MAX,
+        passive_tiebreak_pct: passive_tiebreak, passive_tiebreak_strength: passive_tiebreak_strength,
             };
             let mut solver2 = SubgameSolver::new(config2);
             solver2.algorithm = solver.algorithm.clone();
@@ -1079,15 +1088,6 @@ fn cmd_solve(
         println!("  Smoothed {} total combos", n);
         let expl_after = solver.exploitability_pct();
         println!("  Exploitability after smoothing: {:.4}% pot (was {:.4}%)", expl_after, expl_pct);
-    }
-
-    // Post-processing: passive tie-break (before purify, since purify clips low freqs)
-    if passive_tiebreak > 0.0 {
-        println!("  Passive tie-break (EV threshold={:.2} chips, blend=1.0)...", passive_tiebreak);
-        let n = solver.passive_tiebreak(passive_tiebreak, 1.0);
-        println!("  Adjusted {} combos toward passive action", n);
-        let expl_after = solver.exploitability_pct();
-        println!("  Exploitability after tie-break: {:.4}% pot", expl_after);
     }
 
     // Post-processing: purify low-frequency actions
@@ -1374,6 +1374,7 @@ fn cmd_batch_run(
             allin_pot_ratio: 3.0,
             no_donk: false,
             geometric_2bets: false,
+            player_sizes: [None, None],
         }))
     };
 
@@ -1491,6 +1492,7 @@ fn cmd_batch_run(
             rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0,
             early_stop_pct: 0.0, early_stop_patience: 2,
             par_decision_depth: u32::MAX,
+            passive_tiebreak_pct: 0.0, passive_tiebreak_strength: 1.0,
         };
 
         let spot_start = Instant::now();

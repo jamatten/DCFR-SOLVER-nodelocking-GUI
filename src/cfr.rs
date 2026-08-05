@@ -574,6 +574,15 @@ pub struct SubgameConfig {
     ///                              1 for turn/river-only games.
     /// 0 = parallelize root decision node only.
     pub par_decision_depth: u32,
+    /// In-solve passive tiebreak threshold as a percentage of the current pot.
+    /// When the best aggressive action is only marginally better than the best
+    /// passive action (Check/Call/Fold), a bonus is added to the passive action's
+    /// counterfactual value. 0.0 = disabled (default).
+    pub passive_tiebreak_pct: f32,
+    /// Multiplier for the in-solve passive tiebreak bonus. Higher values nudge
+    /// thin aggressive combos toward passive actions more aggressively.
+    /// 1.0 = default.
+    pub passive_tiebreak_strength: f32,
 }
 
 // ---------------------------------------------------------------------------
@@ -3628,6 +3637,53 @@ fn cfr_traverse(
                     }
                 }
 
+                // In-solve passive tiebreak: nudge thin aggressive combos toward the
+                // best passive action. Only applied when the aggressive line's EV edge
+                // over the best passive line is small relative to the current pot.
+                if config.passive_tiebreak_pct > 0.0 && n_actions >= 2 {
+                    let total_pot = (state.pot + state.bets[0] + state.bets[1]) as f32;
+                    let threshold = total_pot * config.passive_tiebreak_pct / 100.0;
+                    if threshold > 0.0 {
+                        for c in 0..live_count {
+                            if pure_t_reach[c] <= 0.0 { continue; }
+
+                            // Find the current most-played action for this combo.
+                            let mut best_action = 0usize;
+                            let mut best_freq = strat[0][c];
+                            for a in 1..n_actions {
+                                if strat[a][c] > best_freq {
+                                    best_freq = strat[a][c];
+                                    best_action = a;
+                                }
+                            }
+
+                            // Only nudge combos that are currently playing an aggressive action.
+                            if !actions[best_action].is_aggressive() { continue; }
+
+                            let mut max_ev = action_utils[0][c];
+                            let mut best_passive_ev = f32::NEG_INFINITY;
+                            let mut best_passive_idx = 0usize;
+                            for a in 0..n_actions {
+                                let ev = action_utils[a][c];
+                                if ev > max_ev { max_ev = ev; }
+                                if !actions[a].is_aggressive() && ev > best_passive_ev {
+                                    best_passive_ev = ev;
+                                    best_passive_idx = a;
+                                }
+                            }
+
+                            if best_passive_ev == f32::NEG_INFINITY { continue; }
+
+                            let gap = (max_ev - best_passive_ev).max(0.0);
+                            if gap < threshold {
+                                let blend = 1.0 - gap / threshold;
+                                let bonus = blend * threshold * config.passive_tiebreak_strength;
+                                action_utils[best_passive_idx][c] += bonus;
+                            }
+                        }
+                    }
+                }
+
                 // Regret update uses SoA layout: regret_buf[a * live_count + c].
                 // Branchless: t_reach branch removed. Safe because zero-reach combos
                 // have action_utils=0 and node_util=0, so update is a no-op.
@@ -4378,6 +4434,7 @@ mod tests {
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
             depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
+            passive_tiebreak_pct: 0.0, passive_tiebreak_strength: 1.0,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -4401,6 +4458,7 @@ mod tests {
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
             depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
+            passive_tiebreak_pct: 0.0, passive_tiebreak_strength: 1.0,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -4422,6 +4480,7 @@ mod tests {
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
             depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
+            passive_tiebreak_pct: 0.0, passive_tiebreak_strength: 1.0,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -4449,6 +4508,7 @@ mod tests {
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
             depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
+            passive_tiebreak_pct: 0.0, passive_tiebreak_strength: 1.0,
         };
         let mut solver = SubgameSolver::new(config);
         solver.solve();
@@ -4478,6 +4538,7 @@ mod tests {
             dcfr: true,
             cfr_plus: true, skip_cum_strategy: false, dcfr_mode: DcfrMode::Standard,
             depth_limit: None, rake_pct: 0.0, rake_cap: 0.0, exploration_eps: 0.0, entropy_bonus: 0.0, entropy_anneal: false, entropy_root_only: false, opp_dilute: 0.0, softmax_temp: 0.0, current_iteration: 0, use_iso: true, rm_floor: 0.0, alternating: false, t_weight: false, frozen_root: None, check_bias: 0.0, pref_passive_delta: 1.0, pref_beta: 0.0, pref_beta_all_nodes: false, pruning: false, combo_check_bias: None, frozen_warmup: 0, unfreeze_decay: 1.0, early_stop_pct: 0.0, early_stop_patience: 2, par_decision_depth: u32::MAX,
+            passive_tiebreak_pct: 0.0, passive_tiebreak_strength: 1.0,
         };
 
         // Determine root actions and lock OOP to check-only (action 0 = Check = 100%)
